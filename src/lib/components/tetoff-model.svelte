@@ -37,7 +37,7 @@
     let doxEliminationRate = $state<number>(0.2);
     let doxBrainTransportRate = $state<number>(0.2);
     let doxPlasmaTransportRate = $state<number>(1);
-    let doxPlasmaVd = $state<number>(0.21);
+    let doxPlasmaVd = $state<number>(0.021);
     let doxKd = $state<number>(10);
 
     // initial conditions

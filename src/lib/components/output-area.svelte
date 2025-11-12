@@ -194,7 +194,7 @@
         </Table.Root>
     </div>
     <div class="flex flex-col justify-between gap-2 h-1/2 p-10">
-        <div class="flex flex-col gap-5">
+        <!-- <div class="flex flex-col gap-5">
             <Button>
                 <ImageDown />
                 Save Plot</Button
@@ -203,7 +203,7 @@
                 <Save />
                 Export to CSV</Button
             >
-        </div>
+        </div> -->
         <Button variant="destructive" onclick={clearOutput}>
             <Trash />
             Clear Output</Button
