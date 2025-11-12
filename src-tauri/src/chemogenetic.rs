@@ -1,3 +1,5 @@
+use std::ops::Div;
+
 use crate::{
     cno::{CnoArgs, CnoPKConfig},
     dox::DoxPKConfig,
@@ -408,7 +410,13 @@ impl ChemogeneticRMA {
             let post_cno_solution = solver.solve_dense(&post_cno_t_eval).unwrap();
 
             // stitch solutions together
-            let full_solution = stack![pre_cno_solution.inner(), post_cno_solution.inner()];
+            let mut full_solution = stack![pre_cno_solution.inner(), post_cno_solution.inner()];
+
+            // convert to concentration before saving
+            full_solution[7] = full_solution[7] / self.cno_config.cno_brain_vd;
+            full_solution[8] = full_solution[8] / self.cno_config.cno_plasma_vd;
+            full_solution[9] = full_solution[9] / self.cno_config.clz_brain_vd;
+            full_solution[10] = full_solution[10] / self.cno_config.clz_plasma_vd;
 
             let full_t_eval = ndarray::linspace(0., tf, n_steps).into_iter().collect();
             return Solution::new(full_t_eval, full_solution, ModelType::Chemogenetic);
