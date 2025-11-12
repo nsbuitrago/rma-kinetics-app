@@ -45,7 +45,7 @@
     let doxBrainTransportRate = $state<number>(0.2);
     let doxPlasmaTransportRate = $state<number>(1);
     let doxPlasmaVd = $state<number>(0.021);
-    let doxKd = $state<number>(10);
+    let doxKd = $state<number>(5.27);
 
     // cno rates and dose
     let cnoDose = $state<number>(0.03);
