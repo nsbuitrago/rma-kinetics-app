@@ -12,7 +12,7 @@ use solve::{Solution, SolverType};
 
 use crate::{
     chemogenetic::{ChemogeneticRMA, DqConfig},
-    cno::{CnoArgs, CnoPKConfig},
+    cno::CnoArgs,
     dox::DoxArgs,
     oscillation::OscillatingRMA,
     tetoff::{RmaConfig, TetoffRMA, TtaConfig},
@@ -112,9 +112,24 @@ fn get_brain_dox(solution: Solution) -> Vec<f64> {
     solution.ys.row(3).into_iter().copied().collect()
 }
 
+#[tauri::command(rename_all = "snake_case")]
+fn get_dq(solution: Solution) -> Vec<f64> {
+    solution.ys.row(5).into_iter().copied().collect()
+}
+
+#[tauri::command(rename_all = "snake_case")]
+fn get_cno(solution: Solution) -> Vec<f64> {
+    solution.ys.row(7).into_iter().copied().collect()
+}
+
+#[tauri::command(rename_all = "snake_case")]
+fn get_clz(solution: Solution) -> Vec<f64> {
+    solution.ys.row(9).into_iter().copied().collect()
+}
+
 const CONSTITUTIVE_SPECIES_SUMMARY_INDICES: &[usize; 2] = &[0, 1];
 const TETOFF_SPECIES_SUMMARY_INDICES: &[usize; 4] = &[0, 1, 2, 3];
-const CHEMO_SPECIES_SUMMARY_INDICES: &[usize; 6] = &[0, 1, 2, 3, 7, 9];
+const CHEMO_SPECIES_SUMMARY_INDICES: &[usize; 7] = &[0, 1, 2, 3, 5, 7, 9];
 
 #[tauri::command(rename_all = "snake_case")]
 fn get_summary(solution: Solution) -> Vec<Vec<f64>> {
@@ -158,6 +173,9 @@ pub fn run() {
             get_plasma_rma,
             get_tta,
             get_brain_dox,
+            get_dq,
+            get_cno,
+            get_clz,
             get_summary
         ])
         .run(tauri::generate_context!())

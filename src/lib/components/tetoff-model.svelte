@@ -244,8 +244,8 @@
                         >
                         <Input
                             type="number"
-                            min="0"
-                            step="any"
+                            min="1"
+                            step="1"
                             id="tta-coop"
                             bind:value={ttaCoop}
                         />
@@ -322,7 +322,7 @@
                         </div>
                         <div class="grid gap-2">
                             <Label for="dox-bioavailability"
-                                >Bioavailability (%)</Label
+                                >Bioavailability [0, 1]</Label
                             >
                             <Input
                                 type="number"
@@ -354,7 +354,6 @@
                             <Input
                                 type="number"
                                 min="0"
-                                max="1"
                                 step="any"
                                 id="dox-elimination"
                                 bind:value={doxEliminationRate}
@@ -381,7 +380,6 @@
                             <Input
                                 type="number"
                                 min="0"
-                                max="1"
                                 step="any"
                                 id="dox-plasma-transport"
                                 bind:value={doxPlasmaTransportRate}
@@ -408,10 +406,9 @@
                             <Input
                                 type="number"
                                 min="0"
-                                max="1"
                                 step="any"
-                                id="dox-plasma-transport"
-                                bind:value={doxPlasmaTransportRate}
+                                id="dox-kd"
+                                bind:value={doxKd}
                             />
                         </div>
                     </div>

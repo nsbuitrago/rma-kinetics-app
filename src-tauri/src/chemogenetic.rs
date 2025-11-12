@@ -4,7 +4,8 @@ use crate::{
     tetoff::{RmaConfig, TtaConfig},
     DoxArgs, ModelType, Solution, SolverType,
 };
-use diffsol::{op::bdf, MatrixCommon, NalgebraLU, NalgebraMat, OdeBuilder, OdeSolverMethod};
+use diffsol::{MatrixCommon, NalgebraLU, NalgebraMat, OdeBuilder, OdeSolverMethod};
+use nalgebra::stack;
 use serde::{Deserialize, Serialize};
 
 type LinearSolver = NalgebraLU<f64>;
@@ -372,24 +373,117 @@ impl ChemogeneticRMA {
             .build()
             .unwrap();
 
-        let n_steps = tf as usize;
-        let times: Vec<f64> = ndarray::linspace(0., tf, n_steps).into_iter().collect();
+        // let mut solver = problem.bdf::<LinearSolver>().unwrap();
+        let mut solver = problem.tsit45().unwrap();
 
-        let mut solver = problem.bdf::<LinearSolver>().unwrap();
+        // single simulation for CNO administered at T = 0
+        if self.cno_config.t0 == 0. {
+            solver.state_mut().y[6] = self.cno_config.cno_nmol;
+            let n_steps = tf as usize;
+            let pre_cno_t_eval = ndarray::linspace(0., tf, n_steps)
+                .into_iter()
+                .collect::<Vec<f64>>();
+            let solution = solver.solve_dense(&pre_cno_t_eval).unwrap();
+            return Solution::new(
+                pre_cno_t_eval,
+                solution.inner().to_owned(),
+                ModelType::Chemogenetic,
+            );
+        } else {
+            // otherwise we'll do two simulations for now
+            // TODO: use event detection for more robust solution
+            // first segment before CNO
+            let mut n_steps = self.cno_config.t0 as usize;
+            let pre_cno_t_eval = ndarray::linspace(0., self.cno_config.t0, n_steps)
+                .into_iter()
+                .collect::<Vec<f64>>();
+            let pre_cno_solution = solver.solve_dense(&pre_cno_t_eval).unwrap();
 
-        // run first segment
+            // second segment after CNO is applied
+            solver.state_mut().y[6] += self.cno_config.cno_nmol;
+            n_steps = tf as usize;
+            let post_cno_t_eval = ndarray::linspace(self.cno_config.t0, tf, n_steps)
+                .into_iter()
+                .collect::<Vec<f64>>();
+            let post_cno_solution = solver.solve_dense(&post_cno_t_eval).unwrap();
 
-        // let solution = match solver_type {
-        //     SolverType::Tsit45 => {
-        //         let mut solver = problem.tsit45().unwrap();
-        //         solver.solve_dense(&times).unwrap()
-        //     }
-        //     SolverType::Bdf => {
-        //         let mut solver = problem.bdf::<LinearSolver>().unwrap();
-        //         solver.solve_dense(&times).unwrap()
-        //     }
-        // };
+            // stitch solutions together
+            let full_solution = stack![pre_cno_solution.inner(), post_cno_solution.inner()];
 
-        Solution::new(times, solution.inner().to_owned(), ModelType::TetOff)
+            let full_t_eval = ndarray::linspace(0., tf, n_steps).into_iter().collect();
+            return Solution::new(full_t_eval, full_solution, ModelType::Chemogenetic);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn chemogenetic_rma_simulation() {
+        assert_eq!(1, 1);
+
+        let rma_config = RmaConfig {
+            prod_rate: 0.4,
+            leaky_prod_rate: 0.004,
+            rt_rate: 0.7,
+            deg_rate: 0.007,
+        };
+
+        let tta_config = TtaConfig {
+            prod_rate: 12.,
+            leaky_prod_rate: 0.012,
+            deg_rate: 0.2,
+            tta_kd: 4.,
+            tta_coop: 2,
+        };
+
+        let dq_config = DqConfig {
+            prod_rate: 8.,
+            deg_rate: 1.,
+            ec50: 4.,
+            coop: 1.,
+        };
+
+        let dox_config = DoxArgs {
+            dose: 40.,
+            t0: 0.,
+            t1: 0.,
+            vehicle_intake_rate: 0.,
+            bioavailability: 0.9,
+            absorption_rate: 0.8,
+            elimination_rate: 0.2,
+            brain_transport_rate: 0.2,
+            plasma_transport_rate: 0.02,
+            plasma_vd: 1.,
+            dox_kd: Some(4.),
+        };
+
+        let cno_config = CnoArgs {
+            dose: 1.,
+            t0: 0.,
+            cno_absorption_rate: 0.2,
+            cno_elimination_rate: 0.1,
+            cno_reverse_metabolism_rate: 12.,
+            clz_metabolism_rate: 0.12,
+            cno_brain_transport_rate: 0.1,
+            cno_plasma_transport_rate: 0.1,
+            clz_brain_transport_rate: 35.,
+            clz_plasma_transport_rate: 32.,
+            clz_elimination_rate: 1.,
+            cno_plasma_vd: 0.21,
+            cno_brain_vd: 0.2,
+            clz_plasma_vd: 0.2,
+            clz_brain_vd: 0.2,
+            cno_ec50: 6.,
+            clz_ec50: 4.,
+            cno_coop: 1.,
+            clz_coop: 1.,
+        };
+
+        let model = ChemogeneticRMA::new(rma_config, tta_config, dq_config, dox_config, cno_config);
+        let tf = 504.;
+        let init = vec![];
+        let solution = model.solve(tf, init, SolverType::Bdf);
     }
 }

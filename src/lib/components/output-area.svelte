@@ -36,6 +36,7 @@
                     { value: "brainRMA", label: "Brain RMA" },
                     { value: "plasmaRMA", label: "Plasma RMA" },
                     { value: "tTA", label: "tTA" },
+                    { value: "dox", label: "Dox" },
                     { value: "hM3Dq", label: "hM3Dq" },
                     { value: "CNO", label: "CNO" },
                     { value: "CLZ", label: "CLZ" },
@@ -81,6 +82,15 @@
                     species = await invoke("get_brain_dox", {
                         solution: solution,
                     });
+                    break;
+                case "hM3Dq":
+                    species = await invoke("get_dq", { solution: solution });
+                    break;
+                case "CNO":
+                    species = await invoke("get_cno", { solution: solution });
+                    break;
+                case "CLZ":
+                    species = await invoke("get_clz", { solution: solution });
                     break;
                 default:
                     console.warn("Unknown species type: ", speciesType);

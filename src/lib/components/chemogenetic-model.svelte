@@ -48,7 +48,7 @@
     let doxKd = $state<number>(10);
 
     // cno rates and dose
-    let cnoDose = $state<number>(1);
+    let cnoDose = $state<number>(0.03);
     let cnoT0 = $state<number>(48);
     let cnoAbsorptionRate = $state<number>(23.94);
     let cnoEliminationRate = $state<number>(5.51e-2);
@@ -85,15 +85,24 @@
     let ttaDialogOpen = $state<boolean>(false);
     let dqDialogOpen = $state<boolean>(false);
     let doxDialogOpen = $state<boolean>(false);
+    let cnoDialogOpen = $state<boolean>(false);
 
     function resetInitConditions() {
         initBrainRMA = 0;
         initPlasmaRMA = 0;
         initTta = 0;
+        initBrainDox = 0;
+        initPlasmaDox = 0;
+        initDq = dqProdRate / dqDegRate;
+        initPeritonealCno = 0;
+        initBrainCno = 0;
+        initPlasmaCno = 0;
+        initBrainClz = 0;
+        initPlasmaClz = 0;
     }
 
     async function run_simulation() {
-        solution = await invoke("tetoff_model", {
+        solution = await invoke("chemogenetic_model", {
             rma_config: {
                 prod_rate: rmaProdRate,
                 leaky_prod_rate: leakyRmaProdRate,
@@ -106,6 +115,12 @@
                 deg_rate: ttaDegRate,
                 tta_kd: ttaKd,
                 tta_coop: ttaCoop,
+            },
+            dq_config: {
+                prod_rate: dqProdRate,
+                deg_rate: dqDegRate,
+                ec50: dqEc50,
+                coop: dqCoop,
             },
             dox_config: {
                 dose: doxDose,
@@ -120,12 +135,39 @@
                 plasma_vd: doxPlasmaVd,
                 dox_kd: doxKd,
             },
+            cno_config: {
+                dose: cnoDose,
+                t0: cnoT0,
+                cno_absorption_rate: cnoAbsorptionRate,
+                cno_elimination_rate: cnoEliminationRate,
+                cno_reverse_metabolism_rate: cnoRevMetRate,
+                clz_metabolism_rate: clzMetRate,
+                cno_brain_transport_rate: cnoBrainTransportRate,
+                cno_plasma_transport_rate: cnoPlasmaTransportRate,
+                clz_brain_transport_rate: clzBrainTransportRate,
+                clz_plasma_transport_rate: clzPlasmaTransportRate,
+                clz_elimination_rate: clzEliminationRate,
+                cno_plasma_vd: cnoPlasmaVd,
+                cno_brain_vd: cnoBrainVd,
+                clz_plasma_vd: clzPlasmaVd,
+                clz_brain_vd: clzBrainVd,
+                cno_ec50: cnoEc50,
+                clz_ec50: clzEc50,
+                cno_coop: cnoCoop,
+                clz_coop: clzCoop,
+            },
             init: [
                 initBrainRMA,
                 initPlasmaRMA,
                 initTta,
                 initBrainDox,
                 initPlasmaDox,
+                initDq,
+                initPeritonealCno,
+                initBrainCno,
+                initPlasmaCno,
+                initBrainClz,
+                initPlasmaClz,
             ],
             tf: tf,
         });
@@ -295,7 +337,7 @@
                         >
                         <Input
                             type="number"
-                            min="0"
+                            min="1"
                             step="any"
                             id="tta-coop"
                             bind:value={ttaCoop}
@@ -361,7 +403,7 @@
                         <Label for="dq-coop">hM3Dq Hill Coefficient</Label>
                         <Input
                             type="number"
-                            min="0"
+                            min="1"
                             step="any"
                             id="dq-coop"
                             bind:value={dqCoop}
@@ -383,260 +425,610 @@
                 </Dialog.Content>
             </Dialog.Root>
 
-            <!-- Dox Config -->
-            <Dialog.Root bind:open={doxDialogOpen}>
-                <Dialog.Trigger class={buttonVariants({ variant: "outline" })}
-                    >Dox Dose</Dialog.Trigger
-                >
-                <Dialog.Content>
-                    <div class="flex justify-between gap-2">
-                        <div class="grid gap-2">
-                            <Label for="dox-dose">Dose (mg/kg)</Label>
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-dose"
-                                bind:value={doxDose}
-                            />
+            <div class="flex justify-evenly">
+                <!-- Dox Config -->
+                <Dialog.Root bind:open={doxDialogOpen}>
+                    <Dialog.Trigger
+                        class={buttonVariants({ variant: "outline" })}
+                        >Dox Dose</Dialog.Trigger
+                    >
+                    <Dialog.Content>
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="dox-dose">Dose (mg/kg)</Label>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="dox-dose"
+                                    bind:value={doxDose}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="dox-start"
+                                    >Start Time ({timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="dox-start"
+                                    bind:value={doxT0}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="dox-stop"
+                                    >Stop Time ({timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="dox-stop"
+                                    bind:value={doxT1}
+                                />
+                            </div>
                         </div>
-                        <div class="grid gap-2">
-                            <Label for="dox-start"
-                                >Start Time ({timeUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-start"
-                                bind:value={doxT0}
-                            />
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="dox-intake"
+                                    >Food Intake (mg/{timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="dox-intake"
+                                    bind:value={foodIntake}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="dox-bioavailability"
+                                    >Bioavailability [0, 1]</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    max="1"
+                                    step="any"
+                                    id="dox-bioavailability"
+                                    bind:value={doxBioavailability}
+                                />
+                            </div>
                         </div>
-                        <div class="grid gap-2">
-                            <Label for="dox-stop">Stop Time ({timeUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-stop"
-                                bind:value={doxT1}
-                            />
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="dox-absorption"
+                                    >Absorption Rate (1/{timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="dox-absorption"
+                                    bind:value={doxAbsorptionRate}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="dox-elimination"
+                                    >Elimination Rate (1/{timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="dox-elimination"
+                                    bind:value={doxEliminationRate}
+                                />
+                            </div>
                         </div>
-                    </div>
-                    <div class="flex justify-between gap-2">
-                        <div class="grid gap-2">
-                            <Label for="dox-intake"
-                                >Food Intake (mg/{timeUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-intake"
-                                bind:value={foodIntake}
-                            />
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="dox-brain-transport"
+                                    >Brain Transport Rate (1/{timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="dox-brain-transport"
+                                    bind:value={doxBrainTransportRate}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="dox-plasma-transport"
+                                    >Plasma Transport Rate (1/{timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="dox-plasma-transport"
+                                    bind:value={doxPlasmaTransportRate}
+                                />
+                            </div>
                         </div>
-                        <div class="grid gap-2">
-                            <Label for="dox-bioavailability"
-                                >Bioavailability (%)</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                max="1"
-                                step="any"
-                                id="dox-bioavailability"
-                                bind:value={doxBioavailability}
-                            />
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="dox-vd"
+                                    >Volume of distribution (L)</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="dox-vd"
+                                    bind:value={doxPlasmaVd}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="dox-kd"
+                                    >Dox-tTA Kd ({concentrationUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="dox-kd"
+                                    bind:value={doxKd}
+                                />
+                            </div>
                         </div>
-                    </div>
-                    <div class="flex justify-between gap-2">
-                        <div class="grid gap-2">
-                            <Label for="dox-absorption"
-                                >Absorption Rate (1/{timeUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-absorption"
-                                bind:value={doxAbsorptionRate}
-                            />
-                        </div>
-                        <div class="grid gap-2">
-                            <Label for="dox-elimination"
-                                >Elimination Rate (1/{timeUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                max="1"
-                                step="any"
-                                id="dox-elimination"
-                                bind:value={doxEliminationRate}
-                            />
-                        </div>
-                    </div>
-                    <div class="flex justify-between gap-2">
-                        <div class="grid gap-2">
-                            <Label for="dox-brain-transport"
-                                >Brain Transport Rate (1/{timeUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-brain-transport"
-                                bind:value={doxBrainTransportRate}
-                            />
-                        </div>
-                        <div class="grid gap-2">
-                            <Label for="dox-plasma-transport"
-                                >Plasma Transport Rate (1/{timeUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                max="1"
-                                step="any"
-                                id="dox-plasma-transport"
-                                bind:value={doxPlasmaTransportRate}
-                            />
-                        </div>
-                    </div>
-                    <div class="flex justify-between gap-2">
-                        <div class="grid gap-2">
-                            <Label for="dox-vd"
-                                >Volume of distribution (L)</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-vd"
-                                bind:value={doxPlasmaVd}
-                            />
-                        </div>
-                        <div class="grid gap-2">
-                            <Label for="dox-kd"
-                                >Dox-tTA Kd ({concentrationUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                max="1"
-                                step="any"
-                                id="dox-plasma-transport"
-                                bind:value={doxPlasmaTransportRate}
-                            />
-                        </div>
-                    </div>
-                    <div class="flex justify-between">
-                        <Button
-                            variant="outline"
-                            onclick={() => (doxDialogOpen = false)}
-                            class="hover:cursor-pointer">Cancel</Button
-                        >
-                        <div class="flex justify-evenly gap-2">
+                        <div class="flex justify-between">
                             <Button
+                                variant="outline"
                                 onclick={() => (doxDialogOpen = false)}
-                                class="hover:cursor-pointer">Save</Button
+                                class="hover:cursor-pointer">Cancel</Button
                             >
+                            <div class="flex justify-evenly gap-2">
+                                <Button
+                                    onclick={() => (doxDialogOpen = false)}
+                                    class="hover:cursor-pointer">Save</Button
+                                >
+                            </div>
                         </div>
-                    </div>
-                </Dialog.Content>
-            </Dialog.Root>
+                    </Dialog.Content>
+                </Dialog.Root>
 
-            <!-- Initial conditions -->
-            <Dialog.Root bind:open={initCondDialogOpen}>
-                <Dialog.Trigger class={buttonVariants({ variant: "outline" })}
-                    >Initial Conditions</Dialog.Trigger
-                >
-                <Dialog.Content
-                    >>
-                    <div class="flex justify-between gap-2">
-                        <div class="grid gap-2">
-                            <Label for="init-brain-rma"
-                                >Brain RMA ({concentrationUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="init-brain-rma"
-                                bind:value={initBrainRMA}
-                            />
+                <!-- CNO Config -->
+                <Dialog.Root bind:open={cnoDialogOpen}>
+                    <Dialog.Trigger
+                        class={buttonVariants({ variant: "outline" })}
+                        >CNO Dose</Dialog.Trigger
+                    >
+                    <Dialog.Content>
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="cno-dose">Dose (mg/kg)</Label>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="cno-dose"
+                                    bind:value={cnoDose}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="cno-t0"
+                                    >Injection Time ({timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="dox-t0"
+                                    bind:value={cnoT0}
+                                />
+                            </div>
                         </div>
-                        <div class="grid gap-2">
-                            <Label for="init-plasma-rma"
-                                >Plasma RMA ({concentrationUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="init-plasma-rma"
-                                bind:value={initPlasmaRMA}
-                            />
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="cno-abs" class="text-center"
+                                    >CNO Absorption Rate (1/{timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="cno-abs"
+                                    bind:value={cnoAbsorptionRate}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="cno-el" class="text-center"
+                                    >CNO Elimination Rate (1/{timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="cno-el"
+                                    bind:value={cnoEliminationRate}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="clz-el" class="text-center"
+                                    >CLZ Elimination Rate (1/{timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="clz-el"
+                                    bind:value={clzEliminationRate}
+                                />
+                            </div>
                         </div>
-                    </div>
-                    <div class="grid gap-2">
-                        <Label for="init-tta">tTA ({concentrationUnits})</Label>
-                        <Input
-                            type="number"
-                            min="0"
-                            step="any"
-                            id="init-tta"
-                            bind:value={initTta}
-                        />
-                    </div>
-                    <div class="flex justify-between gap-2">
-                        <div class="grid gap-2">
-                            <Label for="init-plasma-dox"
-                                >Plasma Dox ({concentrationUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="init-plasma-dox"
-                                bind:value={initPlasmaDox}
-                            />
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="cno-rev-met"
+                                    >CNO Reverse Metabolism Rate (1/{timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="cno-rev-met"
+                                    bind:value={cnoRevMetRate}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="clz--met"
+                                    >CLZ Metabolism Rate (1/{timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="clz-met"
+                                    bind:value={clzMetRate}
+                                />
+                            </div>
                         </div>
-                        <div class="grid gap-2">
-                            <Label for="init-brain-dox"
-                                >Brain Dox ({concentrationUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="init-brain-dox"
-                                bind:value={initBrainDox}
-                            />
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="cno-brain-trans"
+                                    >CNO Brain Transport Rate (1/{timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="cno-brain-trans"
+                                    bind:value={cnoBrainTransportRate}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="cno-plasma-trans"
+                                    >CNO Plasma Transport Rate (1/{timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="cno-plasma-trans"
+                                    bind:value={cnoPlasmaTransportRate}
+                                />
+                            </div>
                         </div>
-                    </div>
-                    <div class="flex justify-between">
-                        <Button
-                            variant="outline"
-                            onclick={() => (initCondDialogOpen = false)}
-                            class="hover:cursor-pointer">Cancel</Button
-                        >
-                        <div class="flex justify-evenly gap-2">
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="clz-brain-trans"
+                                    >CLZ Brain Transport Rate (1/{timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="clz-brain-trans"
+                                    bind:value={clzBrainTransportRate}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="clz-plasma-trans"
+                                    >CLZ Plasma Transport Rate (1/{timeUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="clz-plasma-trans"
+                                    bind:value={clzPlasmaTransportRate}
+                                />
+                            </div>
+                        </div>
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="cno-plasma-vd"
+                                    >CNO Plasma Vd (L)</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="cno-plasma-vd"
+                                    bind:value={cnoPlasmaVd}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="cno-brain-vd"
+                                    >CNO Brain Vd (L)</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="cno-brain-vd"
+                                    bind:value={cnoBrainVd}
+                                />
+                            </div>
+                        </div>
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="clz-plasma-vd"
+                                    >CLZ Plasma Vd (L)</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="clz-plasma-vd"
+                                    bind:value={clzPlasmaVd}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="clz-brain-vd"
+                                    >CLZ Brain Vd (L)</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="clz-brain-vd"
+                                    bind:value={clzBrainVd}
+                                />
+                            </div>
+                        </div>
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="cno-ec50"
+                                    >CNO EC50 ({concentrationUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="cno-ec50"
+                                    bind:value={cnoEc50}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="clz-ec50"
+                                    >CLZ EC50 ({concentrationUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="clz-ec50"
+                                    bind:value={clzEc50}
+                                />
+                            </div>
+                        </div>
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="cno-coop"
+                                    >CNO-DREADD Hill Coefficient</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="1"
+                                    step="any"
+                                    id="cno-coop"
+                                    bind:value={cnoCoop}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="clz-coop"
+                                    >CLZ-DREADD Hill Coefficient</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="1"
+                                    step="any"
+                                    id="clz-coop"
+                                    bind:value={clzCoop}
+                                />
+                            </div>
+                        </div>
+                        <div class="flex justify-between">
                             <Button
-                                variant="destructive"
-                                onclick={resetInitConditions}
-                                class="hover:cursor-pointer">Reset</Button
+                                variant="outline"
+                                onclick={() => (cnoDialogOpen = false)}
+                                class="hover:cursor-pointer">Cancel</Button
                             >
+                            <div class="flex justify-evenly gap-2">
+                                <Button
+                                    onclick={() => (cnoDialogOpen = false)}
+                                    class="hover:cursor-pointer">Save</Button
+                                >
+                            </div>
+                        </div>
+                    </Dialog.Content>
+                </Dialog.Root>
+
+                <!-- Initial conditions -->
+                <Dialog.Root bind:open={initCondDialogOpen}>
+                    <Dialog.Trigger
+                        class={buttonVariants({ variant: "outline" })}
+                        >Initial Conditions</Dialog.Trigger
+                    >
+                    <Dialog.Content
+                        >>
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="init-brain-rma"
+                                    >Brain RMA ({concentrationUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="init-brain-rma"
+                                    bind:value={initBrainRMA}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="init-plasma-rma"
+                                    >Plasma RMA ({concentrationUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="init-plasma-rma"
+                                    bind:value={initPlasmaRMA}
+                                />
+                            </div>
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="init-tta"
+                                >tTA ({concentrationUnits})</Label
+                            >
+                            <Input
+                                type="number"
+                                min="0"
+                                step="any"
+                                id="init-tta"
+                                bind:value={initTta}
+                            />
+                        </div>
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="init-plasma-dox"
+                                    >Plasma Dox ({concentrationUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="init-plasma-dox"
+                                    bind:value={initPlasmaDox}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="init-brain-dox"
+                                    >Brain Dox ({concentrationUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="init-brain-dox"
+                                    bind:value={initBrainDox}
+                                />
+                            </div>
+                        </div>
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="init-dq"
+                                    >hM3Dq ({concentrationUnits})</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="init-dq"
+                                    bind:value={initDq}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="init-peritoneal-cno"
+                                    >Peritoneal CNO (nmol)</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="init-peritoneal-cno"
+                                    bind:value={initPeritonealCno}
+                                />
+                            </div>
+                        </div>
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="init-brain-cno"
+                                    >Brain CNO (nmol)</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="init-brain-cno"
+                                    bind:value={initBrainCno}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="init-plasma-cno"
+                                    >Plasma CNO (nmol)</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="init-plasma-cno"
+                                    bind:value={initPlasmaCno}
+                                />
+                            </div>
+                        </div>
+                        <div class="flex justify-between gap-2">
+                            <div class="grid gap-2">
+                                <Label for="init-brain-clz"
+                                    >Brain CLZ (nmol)</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="init-brain-clz"
+                                    bind:value={initBrainClz}
+                                />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="init-plasma-clz"
+                                    >Plasma CLZ (nmol)</Label
+                                >
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    id="init-plasma-clz"
+                                    bind:value={initPlasmaClz}
+                                />
+                            </div>
+                        </div>
+                        <div class="flex justify-between">
                             <Button
+                                variant="outline"
                                 onclick={() => (initCondDialogOpen = false)}
-                                class="hover:cursor-pointer">Save</Button
+                                class="hover:cursor-pointer">Cancel</Button
                             >
+                            <div class="flex justify-evenly gap-2">
+                                <Button
+                                    variant="destructive"
+                                    onclick={resetInitConditions}
+                                    class="hover:cursor-pointer">Reset</Button
+                                >
+                                <Button
+                                    onclick={() => (initCondDialogOpen = false)}
+                                    class="hover:cursor-pointer">Save</Button
+                                >
+                            </div>
                         </div>
-                    </div>
-                </Dialog.Content>
-            </Dialog.Root>
+                    </Dialog.Content>
+                </Dialog.Root>
+            </div>
+
             <Button type="submit" class="hover:cursor-pointer"
                 >Run Simulation</Button
             >

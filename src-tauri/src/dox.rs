@@ -4,17 +4,17 @@ const DOX_MW: f64 = 444.4; // g/mol
 
 #[derive(Serialize, Deserialize)]
 pub struct DoxArgs {
-    dose: f64,
-    t0: f64,
-    t1: f64,
-    vehicle_intake_rate: f64,
-    bioavailability: f64,
-    absorption_rate: f64,
-    elimination_rate: f64,
-    brain_transport_rate: f64,
-    plasma_transport_rate: f64,
-    plasma_vd: f64,
-    dox_kd: Option<f64>,
+    pub dose: f64,
+    pub t0: f64,
+    pub t1: f64,
+    pub vehicle_intake_rate: f64,
+    pub bioavailability: f64,
+    pub absorption_rate: f64,
+    pub elimination_rate: f64,
+    pub brain_transport_rate: f64,
+    pub plasma_transport_rate: f64,
+    pub plasma_vd: f64,
+    pub dox_kd: Option<f64>,
 }
 
 #[derive(Serialize, Deserialize)]
