@@ -7,93 +7,55 @@
     import { Input } from "$lib/components/ui/input/index.js";
     import { Button, buttonVariants } from "$lib/components/ui/button/index.js";
     import * as Dialog from "$lib/components/ui/dialog/index.js";
+    import * as Table from "$lib/components/ui/table/index.js";
+    import { AccessPeriod } from "$lib/models.svelte";
+    import { browser } from "$app/environment";
 
-    let { solution = $bindable() } = $props();
+    import { TetoffModel, DoxModel, TetoffState } from "$lib/models.svelte";
+    import { Trash } from "@lucide/svelte";
+
+    let { solution = $bindable(), summary = $bindable() } = $props();
 
     // simulation config
     let timeUnits = $state<"hr" | "min" | "s">("hr");
     let concentrationUnits = $state<"nM" | "µM">("nM");
+    let t0 = $state<number>(0);
     let tf = $state<number>(504);
+    let dt = $state<number>(1);
 
-    // RMA rates
-    let rmaProdRate = $state<number>(0.2);
-    let leakyRmaProdRate = $state<number>(0.002);
-    let rmaRtRate = $state<number>(0.6);
-    let rmaDegRate = $state<number>(0.007);
-
-    // tTA rates
-    let ttaProdRate = $state<number>(10);
-    let ttaDegRate = $state<number>(1);
-    let ttaKd = $state<number>(10);
-    let ttaCoop = $state<number>(2);
-
-    // dox rates and dose
-    let doxDose = $state<number>(40);
-    let doxT0 = $state<number>(0);
-    let doxT1 = $state<number>(96);
-    let foodIntake = $state<number>(0.0001875);
-    let doxBioavailability = $state<number>(0.9);
-    let doxAbsorptionRate = $state<number>(0.8);
-    let doxEliminationRate = $state<number>(0.2);
-    let doxBrainTransportRate = $state<number>(0.2);
-    let doxPlasmaTransportRate = $state<number>(1);
-    let doxPlasmaVd = $state<number>(0.021);
-    let doxKd = $state<number>(10);
-
-    // initial conditions
-    let initBrainRMA = $state<number>(0);
-    let initPlasmaRMA = $state<number>(0);
-    let initTta = $derived(ttaProdRate / ttaDegRate);
-    let initBrainDox = $state<number>(0);
-    let initPlasmaDox = $state<number>(0);
+    // model
+    let model = new TetoffModel();
+    let initTta = $derived(model.tta_prod / model.tta_deg);
+    let initState = $derived(new TetoffState(initTta));
 
     let initCondDialogOpen = $state<boolean>(false);
     let ttaDialogOpen = $state<boolean>(false);
     let doxDialogOpen = $state<boolean>(false);
 
-    function resetInitConditions() {
-        initBrainRMA = 0;
-        initPlasmaRMA = 0;
-        initTta = 0;
-    }
+    let doxDose = $state<number>(0);
+    let doxT0 = $state<number>(0);
+    let doxT1 = $state<number>(0);
+    let doxView = $state<"main" | "pk">("main");
 
     async function run_simulation() {
-        solution = await invoke("tetoff_model", {
-            rma_config: {
-                prod_rate: rmaProdRate,
-                leaky_prod_rate: leakyRmaProdRate,
-                rt_rate: rmaRtRate,
-                deg_rate: rmaDegRate,
-            },
-            tta_config: {
-                prod_rate: ttaProdRate,
-                leaky_prod_rate: 0,
-                deg_rate: ttaDegRate,
-                tta_kd: ttaKd,
-                tta_coop: ttaCoop,
-            },
-            dox_config: {
-                dose: doxDose,
-                t0: doxT0,
-                t1: doxT1,
-                vehicle_intake_rate: foodIntake,
-                bioavailability: doxBioavailability,
-                absorption_rate: doxAbsorptionRate,
-                elimination_rate: doxEliminationRate,
-                brain_transport_rate: doxBrainTransportRate,
-                plasma_transport_rate: doxPlasmaTransportRate,
-                plasma_vd: doxPlasmaVd,
-                dox_kd: doxKd,
-            },
-            init: [
-                initBrainRMA,
-                initPlasmaRMA,
-                initTta,
-                initBrainDox,
-                initPlasmaDox,
-            ],
-            tf: tf,
-        });
+        [solution, summary] = await model.simulate(initState, t0, tf, dt);
+    }
+
+    const isMac = browser && navigator.userAgent.toUpperCase().includes("MAC");
+
+    function handleKeyDown(event: KeyboardEvent) {
+        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+            event.preventDefault();
+            run_simulation();
+        }
+    }
+
+    function pushDoxAccessPeriod(period: AccessPeriod) {
+        model.dox_pk_model.schedule.push(period);
+    }
+
+    function deleteDoxAccessPeriod(index: number) {
+        model.dox_pk_model.schedule.splice(index, 1);
     }
 </script>
 
@@ -101,7 +63,7 @@
     <Card.Header>
         <Card.Title>TetOff RMA</Card.Title>
         <Card.Description class="grid gap-2">
-            <p>tTA induced RMA expression using the TetOff system.</p>
+            <p>Inducible RMA expression using the TetOff system.</p>
         </Card.Description>
     </Card.Header>
     <Card.Content>
@@ -139,15 +101,37 @@
                     </Select.Root>
                 </div>
             </div>
-            <div class="grid gap-2">
-                <Label for="t1">Stop Time ({timeUnits})</Label>
-                <Input
-                    type="number"
-                    min="0"
-                    step="any"
-                    id="tf"
-                    bind:value={tf}
-                />
+            <div class="flex flex-row gap-2">
+                <div class="grid gap-2">
+                    <Label for="t0">Start Time ({timeUnits})</Label>
+                    <Input
+                        type="number"
+                        min="0"
+                        step="any"
+                        id="t0"
+                        bind:value={t0}
+                    />
+                </div>
+                <div class="grid gap-2">
+                    <Label for="tf">Stop Time ({timeUnits})</Label>
+                    <Input
+                        type="number"
+                        min="0"
+                        step="any"
+                        id="tf"
+                        bind:value={tf}
+                    />
+                </div>
+                <div class="grid gap-2">
+                    <Label for="dt">Step size ({timeUnits})</Label>
+                    <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        id="dt"
+                        bind:value={dt}
+                    />
+                </div>
             </div>
             <h1 class="font-bold">RMA Rates</h1>
             <div class="grid gap-2">
@@ -159,7 +143,7 @@
                     min="0"
                     step="any"
                     id="rma-prod-rate"
-                    bind:value={rmaProdRate}
+                    bind:value={model.rma_prod}
                 />
             </div>
             <div class="grid gap-2">
@@ -171,7 +155,7 @@
                     min="0"
                     step="any"
                     id="leaky-rma-prod-rate"
-                    bind:value={leakyRmaProdRate}
+                    bind:value={model.leaky_rma_prod}
                 />
             </div>
             <div class="grid gap-2">
@@ -183,7 +167,7 @@
                     min="0"
                     step="any"
                     id="rma-rt-rate"
-                    bind:value={rmaRtRate}
+                    bind:value={model.rma_bbb_transport}
                 />
             </div>
             <div class="grid gap-2">
@@ -194,7 +178,7 @@
                     min="0"
                     step="any"
                     id="rma-rt-rate"
-                    bind:value={rmaDegRate}
+                    bind:value={model.rma_deg}
                 />
             </div>
 
@@ -213,7 +197,7 @@
                             min="0"
                             step="any"
                             id="tta-prod-rate"
-                            bind:value={ttaProdRate}
+                            bind:value={model.tta_prod}
                         />
                     </div>
                     <div class="grid gap-2">
@@ -225,7 +209,7 @@
                             min="0"
                             step="any"
                             id="tta-deg-rate"
-                            bind:value={ttaDegRate}
+                            bind:value={model.tta_deg}
                         />
                     </div>
                     <div class="grid gap-2">
@@ -235,7 +219,7 @@
                             min="0"
                             step="any"
                             id="tta-kd"
-                            bind:value={ttaKd}
+                            bind:value={model.tta_kd}
                         />
                     </div>
                     <div class="grid gap-2">
@@ -247,182 +231,259 @@
                             min="1"
                             step="1"
                             id="tta-coop"
-                            bind:value={ttaCoop}
+                            bind:value={model.tta_cooperativity}
                         />
-                    </div>
-                    <div class="flex justify-between">
-                        <Button
-                            variant="outline"
-                            onclick={() => (ttaDialogOpen = false)}
-                            class="hover:cursor-pointer">Cancel</Button
-                        >
-                        <div class="flex justify-evenly gap-2">
-                            <Button
-                                onclick={() => (ttaDialogOpen = false)}
-                                class="hover:cursor-pointer">Save</Button
-                            >
-                        </div>
                     </div>
                 </Dialog.Content>
             </Dialog.Root>
 
             <!-- Dox Config -->
-            <Dialog.Root bind:open={doxDialogOpen}>
+            <Dialog.Root
+                bind:open={doxDialogOpen}
+                onOpenChange={() => (doxView = "main")}
+            >
                 <Dialog.Trigger class={buttonVariants({ variant: "outline" })}
                     >Dox Dose</Dialog.Trigger
                 >
-                <Dialog.Content>
-                    <div class="flex justify-between gap-2">
-                        <div class="grid gap-2">
-                            <Label for="dox-dose">Dose (mg/kg)</Label>
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-dose"
-                                bind:value={doxDose}
-                            />
-                        </div>
-                        <div class="grid gap-2">
-                            <Label for="dox-start"
-                                >Start Time ({timeUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-start"
-                                bind:value={doxT0}
-                            />
-                        </div>
-                        <div class="grid gap-2">
-                            <Label for="dox-stop">Stop Time ({timeUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-stop"
-                                bind:value={doxT1}
-                            />
-                        </div>
-                    </div>
-                    <div class="flex justify-between gap-2">
-                        <div class="grid gap-2">
-                            <Label for="dox-intake"
-                                >Food Intake (mg/{timeUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-intake"
-                                bind:value={foodIntake}
-                            />
-                        </div>
-                        <div class="grid gap-2">
-                            <Label for="dox-bioavailability"
-                                >Bioavailability [0, 1]</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                max="1"
-                                step="any"
-                                id="dox-bioavailability"
-                                bind:value={doxBioavailability}
-                            />
-                        </div>
-                    </div>
-                    <div class="flex justify-between gap-2">
-                        <div class="grid gap-2">
-                            <Label for="dox-absorption"
-                                >Absorption Rate (1/{timeUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-absorption"
-                                bind:value={doxAbsorptionRate}
-                            />
-                        </div>
-                        <div class="grid gap-2">
-                            <Label for="dox-elimination"
-                                >Elimination Rate (1/{timeUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-elimination"
-                                bind:value={doxEliminationRate}
-                            />
-                        </div>
-                    </div>
-                    <div class="flex justify-between gap-2">
-                        <div class="grid gap-2">
-                            <Label for="dox-brain-transport"
-                                >Brain Transport Rate (1/{timeUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-brain-transport"
-                                bind:value={doxBrainTransportRate}
-                            />
-                        </div>
-                        <div class="grid gap-2">
-                            <Label for="dox-plasma-transport"
-                                >Plasma Transport Rate (1/{timeUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-plasma-transport"
-                                bind:value={doxPlasmaTransportRate}
-                            />
-                        </div>
-                    </div>
-                    <div class="flex justify-between gap-2">
-                        <div class="grid gap-2">
-                            <Label for="dox-vd"
-                                >Volume of distribution (L)</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-vd"
-                                bind:value={doxPlasmaVd}
-                            />
-                        </div>
-                        <div class="grid gap-2">
-                            <Label for="dox-kd"
-                                >Dox-tTA Kd ({concentrationUnits})</Label
-                            >
-                            <Input
-                                type="number"
-                                min="0"
-                                step="any"
-                                id="dox-kd"
-                                bind:value={doxKd}
-                            />
-                        </div>
-                    </div>
-                    <div class="flex justify-between">
-                        <Button
-                            variant="outline"
-                            onclick={() => (doxDialogOpen = false)}
-                            class="hover:cursor-pointer">Cancel</Button
-                        >
-                        <div class="flex justify-evenly gap-2">
+                <Dialog.Content class="overflow-hidden p-0">
+                    <div
+                        class="flex transition-transform duration-300 ease-in-out"
+                        style="transform: translateX({doxView === 'main'
+                            ? '0%'
+                            : '-100%'})"
+                    >
+                        <!-- Main View -->
+                        <div class="w-full shrink-0 flex flex-col gap-3 p-6">
+                            <div class="flex justify-between gap-2">
+                                <div class="grid gap-2">
+                                    <Label for="dox-dose">Dose (mg/kg)</Label>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="any"
+                                        id="dox-dose"
+                                        bind:value={doxDose}
+                                    />
+                                </div>
+                                <div class="grid gap-2">
+                                    <Label for="dox-start"
+                                        >Start Time ({timeUnits})</Label
+                                    >
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="any"
+                                        id="dox-start"
+                                        bind:value={doxT0}
+                                    />
+                                </div>
+                                <div class="grid gap-2">
+                                    <Label for="dox-stop"
+                                        >Stop Time ({timeUnits})</Label
+                                    >
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="any"
+                                        id="dox-stop"
+                                        bind:value={doxT1}
+                                    />
+                                </div>
+                            </div>
                             <Button
-                                onclick={() => (doxDialogOpen = false)}
-                                class="hover:cursor-pointer">Save</Button
+                                onclick={() =>
+                                    pushDoxAccessPeriod(
+                                        new AccessPeriod(doxDose, [
+                                            doxT0,
+                                            doxT1,
+                                        ]),
+                                    )}>Add new dox access period</Button
                             >
+                            <Button
+                                variant="outline"
+                                onclick={() => (doxView = "pk")}
+                                class="hover:cursor-pointer"
+                            >
+                                See More Parameters
+                            </Button>
+                            <div class="max-h-48 overflow-y-auto">
+                                <Table.Root>
+                                    <Table.Header>
+                                        <Table.Row>
+                                            <Table.Head class="font-bold"
+                                                >Dose</Table.Head
+                                            >
+                                            <Table.Head class="font-bold"
+                                                >Start Time</Table.Head
+                                            >
+                                            <Table.Head class="font-bold"
+                                                >Stop Time</Table.Head
+                                            >
+                                        </Table.Row>
+                                    </Table.Header>
+                                    <Table.Body class="scroll-auto">
+                                        {#each model.dox_pk_model.schedule as schedule, index}
+                                            <Table.Row>
+                                                <Table.Cell
+                                                    >{schedule.dose}</Table.Cell
+                                                >
+                                                <Table.Cell
+                                                    >{schedule
+                                                        .time[0]}</Table.Cell
+                                                >
+                                                <Table.Cell
+                                                    >{schedule
+                                                        .time[1]}</Table.Cell
+                                                >
+                                                <Table.Cell class="">
+                                                    <Button
+                                                        variant="ghost"
+                                                        class="text-destructive"
+                                                        onclick={() =>
+                                                            deleteDoxAccessPeriod(
+                                                                index,
+                                                            )}
+                                                    >
+                                                        <Trash />
+                                                    </Button>
+                                                </Table.Cell>
+                                            </Table.Row>
+                                        {/each}
+                                    </Table.Body>
+                                </Table.Root>
+                            </div>
+                        </div>
+                        <!-- PK Parameters View -->
+                        <div class="w-full shrink-0 flex flex-col gap-3 p-6">
+                            <h3 class="font-semibold">PK Parameters</h3>
+                            <div class="flex justify-between gap-2">
+                                <div class="grid gap-2">
+                                    <Label for="dox-intake"
+                                        >Food Intake (mg/{timeUnits})</Label
+                                    >
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="any"
+                                        id="dox-intake"
+                                        bind:value={
+                                            model.dox_pk_model.vehicle_intake
+                                        }
+                                    />
+                                </div>
+                                <div class="grid gap-2">
+                                    <Label for="dox-bioavailability"
+                                        >Bioavailability [0, 1]</Label
+                                    >
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        max="1"
+                                        step="any"
+                                        id="dox-bioavailability"
+                                        bind:value={
+                                            model.dox_pk_model.bioavailability
+                                        }
+                                    />
+                                </div>
+                            </div>
+                            <div class="flex justify-between gap-2">
+                                <div class="grid gap-2">
+                                    <Label for="dox-absorption"
+                                        >Absorption Rate (1/{timeUnits})</Label
+                                    >
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="any"
+                                        id="dox-absorption"
+                                        bind:value={
+                                            model.dox_pk_model.absorption
+                                        }
+                                    />
+                                </div>
+                                <div class="grid gap-2">
+                                    <Label for="dox-elimination"
+                                        >Elimination Rate (1/{timeUnits})</Label
+                                    >
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="any"
+                                        id="dox-elimination"
+                                        bind:value={
+                                            model.dox_pk_model.elimination
+                                        }
+                                    />
+                                </div>
+                            </div>
+                            <div class="flex justify-between gap-2">
+                                <div class="grid gap-2">
+                                    <Label for="dox-brain-transport"
+                                        >Brain Transport Rate (1/{timeUnits})</Label
+                                    >
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="any"
+                                        id="dox-brain-transport"
+                                        bind:value={
+                                            model.dox_pk_model.brain_transport
+                                        }
+                                    />
+                                </div>
+                                <div class="grid gap-2">
+                                    <Label for="dox-plasma-transport"
+                                        >Plasma Transport Rate (1/{timeUnits})</Label
+                                    >
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="any"
+                                        id="dox-plasma-transport"
+                                        bind:value={
+                                            model.dox_pk_model.plasma_transport
+                                        }
+                                    />
+                                </div>
+                            </div>
+                            <div class="flex justify-between gap-2">
+                                <div class="grid gap-2">
+                                    <Label for="dox-vd"
+                                        >Volume of Distribution (L)</Label
+                                    >
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="any"
+                                        id="dox-vd"
+                                        bind:value={
+                                            model.dox_pk_model.plasma_vd
+                                        }
+                                    />
+                                </div>
+                                <div class="grid gap-2">
+                                    <Label for="dox-kd"
+                                        >Dox-tTA Kd ({concentrationUnits})</Label
+                                    >
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="any"
+                                        id="dox-kd"
+                                        bind:value={model.dox_tta_kd}
+                                    />
+                                </div>
+                            </div>
+                            <div class="flex justify-between">
+                                <Button
+                                    variant="outline"
+                                    onclick={() => (doxView = "main")}
+                                    class="hover:cursor-pointer w-fit"
+                                >
+                                    ← Back
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </Dialog.Content>
@@ -445,7 +506,7 @@
                                 min="0"
                                 step="any"
                                 id="init-brain-rma"
-                                bind:value={initBrainRMA}
+                                bind:value={initState.brain_rma}
                             />
                         </div>
                         <div class="grid gap-2">
@@ -457,7 +518,7 @@
                                 min="0"
                                 step="any"
                                 id="init-plasma-rma"
-                                bind:value={initPlasmaRMA}
+                                bind:value={initState.plasma_rma}
                             />
                         </div>
                     </div>
@@ -468,7 +529,7 @@
                             min="0"
                             step="any"
                             id="init-tta"
-                            bind:value={initTta}
+                            bind:value={initState.tta}
                         />
                     </div>
                     <div class="flex justify-between gap-2">
@@ -481,7 +542,7 @@
                                 min="0"
                                 step="any"
                                 id="init-plasma-dox"
-                                bind:value={initPlasmaDox}
+                                bind:value={initState.plasma_dox}
                             />
                         </div>
                         <div class="grid gap-2">
@@ -493,7 +554,7 @@
                                 min="0"
                                 step="any"
                                 id="init-brain-dox"
-                                bind:value={initBrainDox}
+                                bind:value={initState.brain_dox}
                             />
                         </div>
                     </div>
@@ -506,7 +567,7 @@
                         <div class="flex justify-evenly gap-2">
                             <Button
                                 variant="destructive"
-                                onclick={resetInitConditions}
+                                onclick={() => initState.reset()}
                                 class="hover:cursor-pointer">Reset</Button
                             >
                             <Button
@@ -517,9 +578,16 @@
                     </div>
                 </Dialog.Content>
             </Dialog.Root>
-            <Button type="submit" class="hover:cursor-pointer"
-                >Run Simulation</Button
-            >
+            <Button type="submit" class="hover:cursor-pointer">
+                Run Simulation
+                <span class="opacity-75">
+                    {#if isMac}
+                        `⌘+Return`
+                    {:else}
+                        `Ctrl+Enter`
+                    {/if}
+                </span>
+            </Button>
         </form>
     </Card.Content>
 </Card.Root>

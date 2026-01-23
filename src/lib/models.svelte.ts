@@ -109,6 +109,29 @@ export class TetoffModel {
       dox_tta_kd: this.dox_tta_kd,
     };
   }
+
+  /**
+   * Request TetOff simulation
+   * @param initState
+   * @param t0
+   * @param tf
+   * @param dt
+   */
+  async simulate(initState: TetoffState, t0: number, tf: number, dt: number) {
+    if (isTauriEnv) {
+      let solution = await invoke("simulate_tetoff_model", {
+        model: this.toJSON(),
+        init_state: initState.toJSON(),
+        t0,
+        tf,
+        dt,
+      });
+
+      return solution;
+    } else {
+      console.log("running in the browser. Use wasm");
+    }
+  }
 }
 
 export class AccessPeriod {
@@ -148,7 +171,7 @@ export class DoxModel {
   brain_transport = $state<number>(0.2);
   plasma_transport = $state<number>(1);
   plasma_vd = $state<number>(0.021);
-  schedule = $state<AccessPeriod[]>([]);
+  schedule = $state<AccessPeriod[]>([new AccessPeriod(40, [0, 96])]);
   dose_concentration = $derived.by(() => {
     let dose_concentrations = this.schedule.map((period) => {
       return (
@@ -193,9 +216,18 @@ export class DoxModel {
 export class TetoffState {
   brain_rma = $state<number>(0);
   plasma_rma = $state<number>(0);
-  tta = $state<number>(0);
+  tta: number;
   plasma_dox = $state<number>(0);
   brain_dox = $state<number>(0);
+
+  /**
+   * A constructor for oscillating state which takes an initial tTA dose_concentration
+   * that may be computed from a tTA production and degradation rate.
+   * @param tta
+   */
+  constructor(tta: number) {
+    this.tta = $state<number>(tta);
+  }
 
   reset() {
     this.brain_rma = 0;

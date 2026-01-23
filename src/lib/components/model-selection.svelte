@@ -25,7 +25,7 @@
             <ConstitutiveModel bind:solution bind:summary />
         </Tabs.Content>
         <Tabs.Content value="TetOff">
-            <TetoffModel bind:solution />
+            <TetoffModel bind:solution bind:summary />
         </Tabs.Content>
         <Tabs.Content value="Chemogenetic">
             <ChemogeneticModel bind:solution />

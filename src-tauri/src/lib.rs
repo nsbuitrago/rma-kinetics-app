@@ -1,20 +1,11 @@
-mod chemogenetic;
-mod cno;
-mod dox;
-// mod oscillation;
-mod solve;
-mod tetoff;
-
-use serde::{Deserialize, Serialize};
-use solve::{Solution, SolverType};
-
-use crate::{
-    chemogenetic::{ChemogeneticRMA, DqConfig},
-    cno::CnoArgs,
-    dox::DoxArgs,
-    // oscillation::OscillatingRMA,
-    tetoff::{RmaConfig, TetoffRMA, TtaConfig},
+use differential_equations::{
+    methods::ExplicitRungeKutta, solution::Solution, traits::State as StateTrait,
 };
+use rma_kinetics::{
+    models::{constitutive, oscillation, tetoff},
+    SolutionAccess, Solve,
+};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, PartialEq)]
 pub enum ModelType {
@@ -24,29 +15,6 @@ pub enum ModelType {
     Oscillating,
 }
 
-// enum Species {
-//     BrainRMA,
-//     PlasmaRMA,
-// }
-
-// const SPECIES: &[&str; 7] = &[
-//     "Brain RMA",
-//     "Plasma RMA",
-//     "tTA",
-//     "Dox",
-//     "hM3Dq",
-//     "CNO",
-//     "CLZ",
-// ];
-//
-use differential_equations::{
-    methods::ExplicitRungeKutta, solution::Solution as DESolution, traits::State as StateTrait,
-};
-use rma_kinetics::{
-    models::{constitutive, oscillation, tetoff as rk_tetoff},
-    SolutionAccess, Solve,
-};
-
 #[tauri::command(rename_all = "snake_case")]
 fn simulate_constitutive_model(
     model: constitutive::Model,
@@ -54,7 +22,7 @@ fn simulate_constitutive_model(
     t0: f64,
     tf: f64,
     dt: f64,
-) -> (DESolution<f64, constitutive::State<f64>>, Vec<SummaryData>) {
+) -> (Solution<f64, constitutive::State<f64>>, Vec<SummaryData>) {
     let mut solver = ExplicitRungeKutta::dopri5();
     let solution = model.solve(t0, tf, dt, init_state, &mut solver).unwrap();
     let summary = get_summary(&solution, ModelType::Constitutive);
@@ -69,7 +37,7 @@ fn simulate_oscillating_model(
     t0: f64,
     tf: f64,
     dt: f64,
-) -> (DESolution<f64, oscillation::State<f64>>, Vec<SummaryData>) {
+) -> (Solution<f64, oscillation::State<f64>>, Vec<SummaryData>) {
     let mut solver = ExplicitRungeKutta::dopri5();
     let solution = model.solve(t0, tf, dt, init_state, &mut solver).unwrap();
     let summary = get_summary(&solution, ModelType::Oscillating);
@@ -78,41 +46,16 @@ fn simulate_oscillating_model(
 
 #[tauri::command(rename_all = "snake_case")]
 fn simulate_tetoff_model(
-    model: rk_tetoff::Model,
-    init_state: rk_tetoff::State<f64>,
+    model: tetoff::Model,
+    init_state: tetoff::State<f64>,
     t0: f64,
     tf: f64,
     dt: f64,
-) -> DESolution<f64, rk_tetoff::State<f64>> {
+) -> (Solution<f64, tetoff::State<f64>>, Vec<SummaryData>) {
     let mut solver = ExplicitRungeKutta::dopri5();
-    let solution = model.solve(t0, tf, dt, init_state, &mut solver);
-    solution.unwrap()
-}
-
-#[tauri::command(rename_all = "snake_case")]
-fn tetoff_model(
-    rma_config: RmaConfig,
-    tta_config: TtaConfig,
-    dox_config: DoxArgs,
-    init: Vec<f64>,
-    tf: f64,
-) -> Solution {
-    let model = TetoffRMA::new(rma_config, tta_config, dox_config);
-    model.solve(tf, init, SolverType::Bdf)
-}
-
-#[tauri::command(rename_all = "snake_case")]
-fn chemogenetic_model(
-    rma_config: RmaConfig,
-    tta_config: TtaConfig,
-    dq_config: DqConfig,
-    dox_config: DoxArgs,
-    cno_config: CnoArgs,
-    init: Vec<f64>,
-    tf: f64,
-) -> Solution {
-    let model = ChemogeneticRMA::new(rma_config, tta_config, dq_config, dox_config, cno_config);
-    model.solve(tf, init, SolverType::Bdf)
+    let solution = model.solve(t0, tf, dt, init_state, &mut solver).unwrap();
+    let summary = get_summary(&solution, ModelType::TetOff);
+    (solution, summary)
 }
 
 #[derive(Serialize, Deserialize)]
@@ -149,11 +92,11 @@ pub struct SummaryData {
 }
 
 fn get_summary<S: StateTrait<f64>>(
-    solution: &DESolution<f64, S>,
+    solution: &Solution<f64, S>,
     model_type: ModelType,
 ) -> Vec<SummaryData>
 where
-    DESolution<f64, S>: SolutionAccess,
+    Solution<f64, S>: SolutionAccess,
 {
     let (plasma_rma_tmax, plasma_rma_max) = solution.max_plasma_rma().unwrap();
     let plasma_rma_summary = SummaryData {
@@ -263,8 +206,6 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             simulate_constitutive_model,
             simulate_tetoff_model,
-            tetoff_model,
-            chemogenetic_model,
             simulate_oscillating_model,
         ])
         .run(tauri::generate_context!())
