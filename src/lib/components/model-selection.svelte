@@ -31,7 +31,7 @@
             <ChemogeneticModel bind:solution />
         </Tabs.Content>
         <Tabs.Content value="Oscillating">
-            <OscillationModel bind:solution />
+            <OscillationModel bind:solution bind:summary />
         </Tabs.Content>
     </Tabs.Root>
 </div>

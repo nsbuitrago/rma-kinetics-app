@@ -1,7 +1,7 @@
 mod chemogenetic;
 mod cno;
 mod dox;
-mod oscillation;
+// mod oscillation;
 mod solve;
 mod tetoff;
 
@@ -12,7 +12,7 @@ use crate::{
     chemogenetic::{ChemogeneticRMA, DqConfig},
     cno::CnoArgs,
     dox::DoxArgs,
-    oscillation::OscillatingRMA,
+    // oscillation::OscillatingRMA,
     tetoff::{RmaConfig, TetoffRMA, TtaConfig},
 };
 
@@ -43,7 +43,7 @@ use differential_equations::{
     methods::ExplicitRungeKutta, solution::Solution as DESolution, traits::State as StateTrait,
 };
 use rma_kinetics::{
-    models::{constitutive, tetoff as rk_tetoff},
+    models::{constitutive, oscillation, tetoff as rk_tetoff},
     SolutionAccess, Solve,
 };
 
@@ -57,8 +57,22 @@ fn simulate_constitutive_model(
 ) -> (DESolution<f64, constitutive::State<f64>>, Vec<SummaryData>) {
     let mut solver = ExplicitRungeKutta::dopri5();
     let solution = model.solve(t0, tf, dt, init_state, &mut solver).unwrap();
-    let summary = get_constitutive_summary(&solution);
+    let summary = get_summary(&solution, ModelType::Constitutive);
 
+    (solution, summary)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+fn simulate_oscillating_model(
+    model: oscillation::Model,
+    init_state: oscillation::State<f64>,
+    t0: f64,
+    tf: f64,
+    dt: f64,
+) -> (DESolution<f64, oscillation::State<f64>>, Vec<SummaryData>) {
+    let mut solver = ExplicitRungeKutta::dopri5();
+    let solution = model.solve(t0, tf, dt, init_state, &mut solver).unwrap();
+    let summary = get_summary(&solution, ModelType::Oscillating);
     (solution, summary)
 }
 
@@ -101,19 +115,6 @@ fn chemogenetic_model(
     model.solve(tf, init, SolverType::Bdf)
 }
 
-#[tauri::command(rename_all = "snake_case")]
-fn oscillating_model(
-    rma_prod_rate: f64,
-    rma_rt_rate: f64,
-    rma_deg_rate: f64,
-    frequency: f64,
-    init: Vec<f64>,
-    tf: f64,
-) -> Solution {
-    let model = OscillatingRMA::new(rma_prod_rate, rma_rt_rate, rma_deg_rate, frequency);
-    model.solve(tf, init, SolverType::Bdf)
-}
-
 #[derive(Serialize, Deserialize)]
 pub enum SpeciesType {
     #[serde(rename(serialize = "Brain RMA"))]
@@ -147,9 +148,13 @@ pub struct SummaryData {
     tmax: f64,
 }
 
-fn get_constitutive_summary(
-    solution: &DESolution<f64, constitutive::State<f64>>,
-) -> Vec<SummaryData> {
+fn get_summary<S: StateTrait<f64>>(
+    solution: &DESolution<f64, S>,
+    model_type: ModelType,
+) -> Vec<SummaryData>
+where
+    DESolution<f64, S>: SolutionAccess,
+{
     let (plasma_rma_tmax, plasma_rma_max) = solution.max_plasma_rma().unwrap();
     let plasma_rma_summary = SummaryData {
         species: SpeciesType::PlasmaRMA,
@@ -163,148 +168,93 @@ fn get_constitutive_summary(
         tmax: brain_rma_tmax,
     };
 
-    vec![plasma_rma_summary, brain_rma_summary]
+    let mut summary_data = Vec::new();
+
+    if model_type == ModelType::Constitutive || model_type == ModelType::Oscillating {
+        summary_data.extend([plasma_rma_summary, brain_rma_summary]);
+        return summary_data;
+    }
+
+    let (plasma_dox_tmax, plasma_dox_max) = solution.max_plasma_dox().unwrap();
+    let plasma_dox_summary = SummaryData {
+        species: SpeciesType::PlasmaDox,
+        max_concentration: plasma_dox_max,
+        tmax: plasma_dox_tmax,
+    };
+
+    let (brain_dox_tmax, brain_dox_max) = solution.max_brain_dox().unwrap();
+    let brain_dox_summary = SummaryData {
+        species: SpeciesType::BrainDox,
+        max_concentration: brain_dox_max,
+        tmax: brain_dox_tmax,
+    };
+
+    let (tta_tmax, tta_max) = solution.max_tta().unwrap();
+    let tta_summary = SummaryData {
+        species: SpeciesType::Tta,
+        max_concentration: tta_max,
+        tmax: tta_tmax,
+    };
+
+    summary_data.extend([plasma_dox_summary, brain_dox_summary, tta_summary]);
+
+    if model_type == ModelType::TetOff {
+        return summary_data;
+    }
+
+    let (dreadd_tmax, dreadd_max) = solution.max_dreadd().unwrap();
+    let dreadd_summary = SummaryData {
+        species: SpeciesType::Dreadd,
+        max_concentration: dreadd_max,
+        tmax: dreadd_tmax,
+    };
+
+    let (peritoneal_cno_tmax, peritoneal_cno_max) = solution.max_peritoneal_cno().unwrap();
+    let peritoneal_cno_summary = SummaryData {
+        species: SpeciesType::PeritonealCno,
+        max_concentration: peritoneal_cno_max,
+        tmax: peritoneal_cno_tmax,
+    };
+
+    let (plasma_cno_tmax, plasma_cno_max) = solution.max_plasma_cno().unwrap();
+    let plasma_cno_summary = SummaryData {
+        species: SpeciesType::PlasmaCno,
+        max_concentration: plasma_cno_max,
+        tmax: plasma_cno_tmax,
+    };
+
+    let (brain_cno_tmax, brain_cno_max) = solution.max_brain_cno().unwrap();
+    let brain_cno_summary = SummaryData {
+        species: SpeciesType::BrainCno,
+        max_concentration: brain_cno_max,
+        tmax: brain_cno_tmax,
+    };
+
+    let (plasma_clz_tmax, plasma_clz_max) = solution.max_plasma_clz().unwrap();
+    let plasma_clz_summary = SummaryData {
+        species: SpeciesType::PlasmaClz,
+        max_concentration: plasma_clz_max,
+        tmax: plasma_clz_tmax,
+    };
+
+    let (brain_clz_tmax, brain_clz_max) = solution.max_brain_clz().unwrap();
+    let brain_clz_summary = SummaryData {
+        species: SpeciesType::BrainClz,
+        max_concentration: brain_clz_max,
+        tmax: brain_clz_tmax,
+    };
+
+    summary_data.extend(vec![
+        dreadd_summary,
+        peritoneal_cno_summary,
+        plasma_cno_summary,
+        brain_cno_summary,
+        plasma_clz_summary,
+        brain_clz_summary,
+    ]);
+
+    summary_data
 }
-
-// #[tauri::command(rename_all = "snake_case")]
-// fn get_tetoff_summary(solution: DESolution<f64, rk_tetoff::State<f64>>) -> Vec<SummaryData> {
-//     let (plasma_rma_tmax, plasma_rma_max) = solution.max_plasma_rma().unwrap();
-//     let plasma_rma_summary = SummaryData {
-//         species: SpeciesType::PlasmaRMA,
-//         max_concentration: plasma_rma_max,
-//         tmax: plasma_rma_tmax,
-//     };
-//     let (brain_rma_tmax, brain_rma_max) = solution.max_brain_rma().unwrap();
-//     let brain_rma_summary = SummaryData {
-//         species: SpeciesType::BrainRMA,
-//         max_concentration: brain_rma_max,
-//         tmax: brain_rma_tmax,
-//     };
-
-//     let (tta_tmax, tta_max) = solution.max_tta().unwrap();
-//     let tta_summary = SummaryData {
-//         species: SpeciesType::Tta,
-//         max_concentration: tta_max,
-//         tmax: tta_tmax,
-//     };
-
-//     let (plasma_dox_tmax, plasma_dox_max) = solution.max_plasma_dox().unwrap();
-//     let plasma_dox_summary = SummaryData {
-//         species: SpeciesType::PlasmaDox,
-//         max_concentration: plasma_dox_max,
-//         tmax: plasma_dox_tmax,
-//     };
-
-//     let (brain_dox_tmax, brain_dox_max) = solution.max_brain_dox().unwrap();
-//     let brain_dox_summary = SummaryData {
-//         species: SpeciesType::BrainDox,
-//         max_concentration: brain_dox_max,
-//         tmax: brain_dox_tmax,
-//     };
-
-//     vec![
-//         plasma_rma_summary,
-//         brain_rma_summary,
-//         tta_summary,
-//         plasma_dox_summary,
-//         brain_dox_summary,
-//     ]
-// }
-
-// #[tauri::command(rename_all = "snake_case")]
-// fn get_summary_data(solution: Solution, model_type: ModelType) -> Vec<SummaryData> {
-//     let (plasma_rma_tmax, plasma_rma_max) = solution.max_plasma_rma().unwrap();
-//     let plasma_rma_summary = SummaryData {
-//         species: SpeciesType::PlasmaRMA,
-//         max_concentration: plasma_rma_max,
-//         tmax: plasma_rma_tmax,
-//     };
-//     let (brain_rma_tmax, brain_rma_max) = solution.max_brain_rma().unwrap();
-//     let brain_rma_summary = SummaryData {
-//         species: SpeciesType::BrainRMA,
-//         max_concentration: brain_rma_max,
-//         tmax: brain_rma_tmax,
-//     };
-
-//     let summary = vec![plasma_rma_summary, brain_rma_summary];
-
-//     if model_type == ModelType::TetOff || model_type == ModelType::Chemogenetic {
-//         let (tta_tmax, tta_max) = solution.max_tta().unwrap();
-//         let tta_summary = SummaryData {
-//             species: SpeciesType::Tta,
-//             max_concentration: tta_max,
-//             tmax: tta_tmax,
-//         };
-//         summary.push(tta_summary);
-//         let (plasma_dox_tmax, plasma_dox_max) = solution.max_plasma_dox().unwrap();
-//         let plasma_dox_summary = SummaryData {
-//             species: SpeciesType::PlasmaDox,
-//             max_concentration: plasma_dox_max,
-//             tmax: plasma_dox_tmax,
-//         };
-//         summary.push(plasma_dox_summary);
-
-//         let (brain_dox_tmax, brain_dox_max) = solution.max_brain_dox().unwrap();
-//         let brain_dox_summary = SummaryData {
-//             species: SpeciesType::BrainDox,
-//             max_concentration: brain_dox_max,
-//             tmax: brain_dox_tmax,
-//         };
-//         summary.push(brain_dox_summary);
-//     }
-
-//     if model_type == ModelType::Chemogenetic {
-//         let (dreadd_tmax, dreadd_max) = solution.max_dreadd().unwrap();
-//         let dreadd_summary = SummaryData {
-//             species: SpeciesType::Dreadd,
-//             max_concentration: dreadd_max,
-//             tmax: dreadd_tmax,
-//         };
-//         summary.push(dreadd_summary);
-
-//         let (peritoneal_cno_tmax, peritoneal_cno_max) = solution.max_peritoneal_cno().unwrap();
-//         let peritoneal_cno_summary = SummaryData {
-//             species: SpeciesType::PeritonealCno,
-//             max_concentration: peritoneal_cno_max,
-//             tmax: peritoneal_cno_tmax,
-//         };
-//         summary.push(peritoneal_cno_summary);
-
-//         let (plasma_cno_tmax, plasma_cno_max) = solution.max_plasma_cno().unwrap();
-//         let plasma_cno_summary = SummaryData {
-//             species: SpeciesType::PlasmaCno,
-//             max_concentration: plasma_cno_max,
-//             tmax: plasma_cno_tmax,
-//         };
-//         summary.push(plasma_cno_summary);
-
-//         let (brain_cno_tmax, brain_cno_max) = solution.max_brain_cno().unwrap();
-//         let brain_cno_summary = SummaryData {
-//             species: SpeciesType::BrainCno,
-//             max_concentration: brain_cno_max,
-//             tmax: brain_cno_tmax,
-//         };
-//         summary.push(brain_cno_summary);
-
-//         let (plasma_clz_tmax, plasma_clz_max) = solution.max_plasma_clz().unwrap();
-//         let plasma_clz_summary = SummaryData {
-//             species: SpeciesType::PlasmaClz,
-//             max_concentration: plasma_clz_max,
-//             tmax: plasma_clz_tmax,
-//         };
-//         summary.push(plasma_clz_summary);
-
-//         let (brain_clz_tmax, brain_clz_max) = solution.max_brain_clz().unwrap();
-//         let brain_clz_summary = SummaryData {
-//             species: SpeciesType::BrainClz,
-//             max_concentration: brain_clz_max,
-//             tmax: brain_clz_tmax,
-//         };
-//         summary.push(brain_clz_summary);
-
-//         summary
-//     }
-// }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -315,7 +265,7 @@ pub fn run() {
             simulate_tetoff_model,
             tetoff_model,
             chemogenetic_model,
-            oscillating_model,
+            simulate_oscillating_model,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -225,3 +225,72 @@ export class TetoffState {
     };
   }
 }
+
+export class OscillatingModel {
+  prod = $state<number>(0.2);
+  bbbTransport = $state<number>(0.6);
+  deg = $state<number>(0.007);
+  freq = $state<number>(0.0138);
+
+  /**
+   * Serialize this model to a plain object for Tauri/Rust serialization.
+   * Rust expects snake_case field names based on the `rename_all = "snake_case"` attribute.
+   */
+  toJSON(): { prod: number; bbb_transport: number; deg: number; freq: number } {
+    return {
+      prod: this.prod,
+      bbb_transport: this.bbbTransport,
+      deg: this.deg,
+      freq: this.freq,
+    };
+  }
+
+  /**
+   * Request constitutive simulation
+   * @param init_state
+   * @param t0
+   * @param tf
+   * @param dt
+   */
+  async simulate(
+    init_state: ConstitutiveState,
+    t0: number,
+    tf: number,
+    dt: number,
+  ) {
+    if (isTauriEnv) {
+      let solution = await invoke("simulate_oscillating_model", {
+        model: this.toJSON(),
+        init_state: init_state.toJSON(),
+        t0,
+        tf,
+        dt,
+      });
+
+      return solution;
+    } else {
+      console.log("running in the browser. Use wasm");
+    }
+  }
+}
+
+export class OscillatingState {
+  brain_rma = $state<number>(0);
+  plasma_rma = $state<number>(0);
+
+  reset() {
+    this.brain_rma = 0;
+    this.plasma_rma = 0;
+  }
+
+  /**
+   * Serialize this state to a plain object for Tauri/Rust serialization.
+   * Rust expects snake_case field names based on the `rename_all = "snake_case"` attribute.
+   */
+  toJSON(): { brain_rma: number; plasma_rma: number } {
+    return {
+      brain_rma: this.brain_rma,
+      plasma_rma: this.plasma_rma,
+    };
+  }
+}
