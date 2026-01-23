@@ -5,7 +5,11 @@
     import ChemogeneticModel from "$lib/components/chemogenetic-model.svelte";
     import OscillationModel from "$lib/components/oscillating-model.svelte";
 
-    let { modelType = $bindable(), solution = $bindable() } = $props();
+    let {
+        modelType = $bindable(),
+        solution = $bindable(),
+        summary = $bindable(),
+    } = $props();
 </script>
 
 <div class="grid gap-2">
@@ -18,7 +22,7 @@
             <Tabs.Trigger value="Oscillating">Oscillating</Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="Constitutive">
-            <ConstitutiveModel bind:solution />
+            <ConstitutiveModel bind:solution bind:summary />
         </Tabs.Content>
         <Tabs.Content value="TetOff">
             <TetoffModel bind:solution />

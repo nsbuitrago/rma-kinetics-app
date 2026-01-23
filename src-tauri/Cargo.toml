@@ -1,5 +1,5 @@
 [package]
-name = "rma-kinetics"
+name = "rma-kinetics-app"
 version = "0.1.0"
 description = "Interface for running kinetic simulations of released markers of activity."
 authors = ["nsbuitrago"]
@@ -11,7 +11,7 @@ edition = "2021"
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "rma_kinetics_gui_lib"
+name = "rma_kinetics_app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -26,3 +26,5 @@ diffsol = { version = "0.7.0" }
 diffsl = "0.5.4"
 nalgebra = { version = "0.34.1", features = ["serde-serialize"] }
 ndarray = "0.17.1"
+rma-kinetics = { git = "https://github.com/nsbuitrago/rma-kinetics-rs", branch = "dev", features = ["serde"] }
+differential-equations = { version = "0.5.2", features = ["serde"] }

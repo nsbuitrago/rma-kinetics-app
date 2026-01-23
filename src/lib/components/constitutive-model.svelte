@@ -1,46 +1,43 @@
 <script lang="ts">
-    import { invoke } from "@tauri-apps/api/core";
-
     import * as Card from "$lib/components/ui/card/index.js";
     import * as Select from "$lib/components/ui/select/index.js";
     import { Label } from "$lib/components/ui/label/index.js";
     import { Input } from "$lib/components/ui/input/index.js";
     import { Button, buttonVariants } from "$lib/components/ui/button/index.js";
     import * as Dialog from "$lib/components/ui/dialog/index.js";
+    import { browser } from "$app/environment";
 
-    let { solution = $bindable() } = $props();
+    import { ConstitutiveModel, ConstitutiveState } from "$lib/models.svelte";
+
+    let { solution = $bindable(), summary = $bindable() } = $props();
 
     // simulation config
     let timeUnits = $state<"hr" | "min" | "s">("hr");
     let concentrationUnits = $state<"nM" | "µM">("nM");
+    let t0 = $state<number>(0);
     let tf = $state<number>(504);
+    let dt = $state<number>(1);
 
-    // RMA rates
-    let rmaProdRate = $state<number>(0.2);
-    let rmaRtRate = $state<number>(0.6);
-    let rmaDegRate = $state<number>(0.007);
-
-    // initial conditions
-    let initBrainRMA = $state<number>(0);
-    let initPlasmaRMA = $state<number>(0);
-
+    // model
+    let model = new ConstitutiveModel();
+    let init_state = new ConstitutiveState();
     let initCondDialogOpen = $state<boolean>(false);
 
-    function resetInitConditions() {
-        initBrainRMA = 0;
-        initPlasmaRMA = 0;
+    async function run_simulation() {
+        [solution, summary] = await model.simulate(init_state, t0, tf, dt);
     }
 
-    async function run_simulation() {
-        solution = await invoke("constitutive_model", {
-            rma_prod_rate: rmaProdRate,
-            rma_rt_rate: rmaRtRate,
-            rma_deg_rate: rmaDegRate,
-            init: [initBrainRMA, initPlasmaRMA],
-            tf: tf,
-        });
+    const isMac = browser && navigator.userAgent.toUpperCase().includes("MAC");
+
+    function handleKeyDown(event: KeyboardEvent) {
+        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+            event.preventDefault();
+            run_simulation();
+        }
     }
 </script>
+
+<svelte:window onkeydown={handleKeyDown} />
 
 <Card.Root>
     <Card.Header>
@@ -86,15 +83,37 @@
                     </Select.Root>
                 </div>
             </div>
-            <div class="grid gap-2">
-                <Label for="t1">Stop Time ({timeUnits})</Label>
-                <Input
-                    type="number"
-                    min="0"
-                    step="any"
-                    id="tf"
-                    bind:value={tf}
-                />
+            <div class="flex flex-row gap-2">
+                <div class="grid gap-2">
+                    <Label for="t0">Start Time ({timeUnits})</Label>
+                    <Input
+                        type="number"
+                        min="0"
+                        step="any"
+                        id="t0"
+                        bind:value={t0}
+                    />
+                </div>
+                <div class="grid gap-2">
+                    <Label for="tf">Stop Time ({timeUnits})</Label>
+                    <Input
+                        type="number"
+                        min="0"
+                        step="any"
+                        id="tf"
+                        bind:value={tf}
+                    />
+                </div>
+                <div class="grid gap-2">
+                    <Label for="dt">Step size ({timeUnits})</Label>
+                    <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        id="dt"
+                        bind:value={dt}
+                    />
+                </div>
             </div>
             <h1 class="font-bold">RMA Rates</h1>
             <div class="grid gap-2">
@@ -106,7 +125,7 @@
                     min="0"
                     step="any"
                     id="rma-prod-rate"
-                    bind:value={rmaProdRate}
+                    bind:value={model.prod}
                 />
             </div>
             <div class="grid gap-2">
@@ -118,7 +137,7 @@
                     min="0"
                     step="any"
                     id="rma-rt-rate"
-                    bind:value={rmaRtRate}
+                    bind:value={model.bbbTransport}
                 />
             </div>
             <div class="grid gap-2">
@@ -129,7 +148,7 @@
                     min="0"
                     step="any"
                     id="rma-rt-rate"
-                    bind:value={rmaDegRate}
+                    bind:value={model.deg}
                 />
             </div>
             <Dialog.Root bind:open={initCondDialogOpen}>
@@ -146,7 +165,7 @@
                             min="0"
                             step="any"
                             id="init-brain-rma"
-                            bind:value={initBrainRMA}
+                            bind:value={init_state.brain_rma}
                         />
                     </div>
                     <div class="grid gap-2">
@@ -158,7 +177,7 @@
                             min="0"
                             step="any"
                             id="init-plasma-rma"
-                            bind:value={initPlasmaRMA}
+                            bind:value={init_state.plasma_rma}
                         />
                     </div>
                     <div class="flex justify-between">
@@ -170,7 +189,7 @@
                         <div class="flex justify-evenly gap-2">
                             <Button
                                 variant="destructive"
-                                onclick={resetInitConditions}
+                                onclick={() => init_state.reset()}
                                 class="hover:cursor-pointer">Reset</Button
                             >
                             <Button
@@ -181,9 +200,16 @@
                     </div>
                 </Dialog.Content>
             </Dialog.Root>
-            <Button type="submit" class="hover:cursor-pointer"
-                >Run Simulation</Button
-            >
+            <Button type="submit" class="hover:cursor-pointer">
+                Run Simulation
+                <span class="opacity-75">
+                    {#if isMac}
+                        `⌘+Return`
+                    {:else}
+                        `Ctrl+Enter`
+                    {/if}
+                </span>
+            </Button>
         </form>
     </Card.Content>
 </Card.Root>

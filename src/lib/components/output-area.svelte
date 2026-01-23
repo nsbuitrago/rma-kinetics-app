@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { invoke } from "@tauri-apps/api/core";
     import * as Select from "$lib/components/ui/select/index.js";
     import { Button } from "$lib/components/ui/button/index.js";
     import * as Table from "$lib/components/ui/table/index.js";
@@ -7,12 +6,21 @@
     import { fade } from "svelte/transition";
     import * as Plot from "@observablehq/plot";
     import { dev } from "$app/environment";
+    import { isTauriEnv } from "$lib/models.svelte";
+    import { getSpecies } from "$lib/solution.js";
 
-    let { modelType = $bindable(), solution = $bindable() } = $props();
-    let plotArea: HTMLElement;
-    let time = $derived(solution.ts);
+    let {
+        modelType = $bindable(),
+        solution = $bindable(),
+        summary = $bindable(),
+    } = $props();
 
-    let speciesTypes = $derived.by(() => {
+    interface speciesTypeInterface {
+        value: string;
+        label: string;
+    }
+
+    let speciesTypes: speciesTypeInterface[] = $derived.by(() => {
         switch (modelType) {
             case "Constitutive":
                 return [
@@ -41,68 +49,39 @@
                     { value: "CNO", label: "CNO" },
                     { value: "CLZ", label: "CLZ" },
                 ];
+            default:
+                return [];
         }
     });
 
-    let speciesType = $state("plasmaRMA");
-    const selectedSpecies = $derived(
+    let speciesType = $state<string>("plasmaRMA");
+    let selectedSpecies = $derived(
         speciesTypes.find((s) => s.value === speciesType)?.label ??
             "Select a species",
     );
+
+    let plotArea: HTMLElement;
+    let time = $derived(solution.t);
 
     // visualize result
     $effect(() => {
         // skip plotting if
         // 1. plotArea element hasn't been mounted in the DOM
         // 2. solution has no data
-        if (!plotArea || !solution.ts || solution.ts.length === 0) {
+        if (!plotArea || !solution.t || solution.t.length === 0) {
             if (plotArea) plotArea.innerHTML = "";
             return;
         }
 
-        let active = true;
-
         async function plotSpecies() {
-            let species;
-            switch (speciesType) {
-                case "plasmaRMA":
-                    species = await invoke("get_plasma_rma", {
-                        solution: solution,
-                    });
-                    break;
-                case "brainRMA":
-                    species = await invoke("get_brain_rma", {
-                        solution: solution,
-                    });
-                    break;
-                case "tTA":
-                    species = await invoke("get_tta", { solution: solution });
-                    break;
-                case "dox":
-                    species = await invoke("get_brain_dox", {
-                        solution: solution,
-                    });
-                    break;
-                case "hM3Dq":
-                    species = await invoke("get_dq", { solution: solution });
-                    break;
-                case "CNO":
-                    species = await invoke("get_cno", { solution: solution });
-                    break;
-                case "CLZ":
-                    species = await invoke("get_clz", { solution: solution });
-                    break;
-                default:
-                    console.warn("Unknown species type: ", speciesType);
-                    return;
-            }
+            let species = getSpecies(solution, speciesType);
 
-            const data = time.map((t, i) => ({
+            const data = time.map((t: number, i: number) => ({
                 Time: t,
                 Concentration: species[i],
             }));
 
-            if (active && plotArea && species) {
+            if (plotArea && species) {
                 const plot = Plot.plot({
                     grid: true,
                     marks: [
@@ -115,33 +94,7 @@
         }
 
         plotSpecies();
-
-        return () => {
-            active = false;
-        };
     });
-
-    // calcualte summary statistics
-    let summaryStats = $state([]);
-    $effect(() => {
-        async function getSummary() {
-            summaryStats = await invoke("get_summary", { solution: solution });
-        }
-
-        getSummary();
-
-        if (dev) {
-            $inspect("Simulation Summary: ", summaryStats);
-        }
-    });
-
-    function clearOutput() {
-        solution = {
-            ts: [],
-            ys: [],
-            model: modelType,
-        };
-    }
 </script>
 
 <div class="flex" in:fade={{ duration: 300 }}>
@@ -173,21 +126,13 @@
                 </Table.Row>
             </Table.Header>
             <Table.Body>
-                {#each speciesTypes as speciesType, speciesIndex (speciesType.value)}
+                {#each summary as summaryData}
                     <Table.Row>
-                        <Table.Cell>{speciesType.label}</Table.Cell>
-                        {#if summaryStats && summaryStats.length > 0 && summaryStats[0].length > 0}
-                            <Table.Cell
-                                >{summaryStats[speciesIndex][0].toFixed(
-                                    2,
-                                )}</Table.Cell
-                            >
-                            <Table.Cell
-                                >{summaryStats[speciesIndex][1].toFixed(
-                                    2,
-                                )}</Table.Cell
-                            >
-                        {/if}
+                        <Table.Cell>{summaryData.species}</Table.Cell>
+                        <Table.Cell>
+                            {summaryData.max_concentration.toFixed(2)}
+                        </Table.Cell>
+                        <Table.Cell>{summaryData.tmax.toFixed(2)}</Table.Cell>
                     </Table.Row>
                 {/each}
             </Table.Body>
@@ -204,9 +149,9 @@
                 Export to CSV</Button
             >
         </div> -->
-        <Button variant="destructive" onclick={clearOutput}>
+        <!-- <Button variant="destructive" onclick={clearOutput}>
             <Trash />
             Clear Output</Button
-        >
+        > -->
     </div>
 </div>
