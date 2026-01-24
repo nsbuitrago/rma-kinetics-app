@@ -62,3 +62,16 @@
         bind:value={model.rma_deg}
     />
 </div>
+
+{#if model.freq}
+    <div class="grid gap-2">
+        <Label for="freq">Freq (1/{timeUnits})</Label>
+        <Input
+            type="number"
+            min="0"
+            step="any"
+            id="freq"
+            bind:value={model.freq}
+        />
+    </div>
+{/if}

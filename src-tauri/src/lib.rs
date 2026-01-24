@@ -1,8 +1,9 @@
 use differential_equations::{
-    methods::ExplicitRungeKutta, solution::Solution, traits::State as StateTrait,
+    methods::ExplicitRungeKutta, prelude::DiagonallyImplicitRungeKutta, solution::Solution,
+    traits::State as StateTrait,
 };
 use rma_kinetics::{
-    models::{constitutive, oscillation, tetoff},
+    models::{chemogenetic, constitutive, oscillation, tetoff},
     SolutionAccess, Solve,
 };
 use serde::{Deserialize, Serialize};
@@ -55,6 +56,20 @@ fn simulate_tetoff_model(
     let mut solver = ExplicitRungeKutta::dopri5();
     let solution = model.solve(t0, tf, dt, init_state, &mut solver).unwrap();
     let summary = get_summary(&solution, ModelType::TetOff);
+    (solution, summary)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+fn simulate_chemogenetic_model(
+    model: chemogenetic::Model,
+    init_state: chemogenetic::State<f64>,
+    t0: f64,
+    tf: f64,
+    dt: f64,
+) -> (Solution<f64, chemogenetic::State<f64>>, Vec<SummaryData>) {
+    let mut solver = DiagonallyImplicitRungeKutta::kvaerno423();
+    let solution = model.solve(t0, tf, dt, init_state, &mut solver).unwrap();
+    let summary = get_summary(&solution, ModelType::Chemogenetic);
     (solution, summary)
 }
 
@@ -206,6 +221,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             simulate_constitutive_model,
             simulate_tetoff_model,
+            simulate_chemogenetic_model,
             simulate_oscillating_model,
         ])
         .run(tauri::generate_context!())
