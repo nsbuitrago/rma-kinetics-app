@@ -2,9 +2,9 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 export const isTauriEnv: boolean = isTauri();
 
 export class ConstitutiveModel {
-  prod = $state<number>(0.2);
-  bbbTransport = $state<number>(0.6);
-  deg = $state<number>(0.007);
+  rma_prod = $state<number>(0.2);
+  rma_bbb_transport = $state<number>(0.6);
+  rma_deg = $state<number>(0.007);
 
   /**
    * Serialize this model to a plain object for Tauri/Rust serialization.
@@ -12,9 +12,9 @@ export class ConstitutiveModel {
    */
   toJSON(): { prod: number; bbb_transport: number; deg: number } {
     return {
-      prod: this.prod,
-      bbb_transport: this.bbbTransport,
-      deg: this.deg,
+      prod: this.rma_prod,
+      bbb_transport: this.rma_bbb_transport,
+      deg: this.rma_deg,
     };
   }
 

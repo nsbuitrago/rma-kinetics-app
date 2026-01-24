@@ -4,7 +4,6 @@
     import RmaRates from "$lib/components/rma-rates.svelte";
     import InitState from "$lib/components/init-state.svelte";
     import SubmitButton from "$lib/components/submit-button.svelte";
-
     import { ConstitutiveModel, ConstitutiveState } from "$lib/models.svelte";
 
     let { solution = $bindable(), summary = $bindable() } = $props();
@@ -57,18 +56,6 @@
                 bind:dialogOpen={initCondDialogOpen}
             />
             <SubmitButton {run_simulation} />
-            <!--
-            <Button type="submit" class="hover:cursor-pointer">
-                Run Simulation
-                <span class="opacity-75">
-                    {#if isMac}
-                        `⌘+Return`
-                    {:else}
-                        `Ctrl+Enter`
-                    {/if}
-                </span>
-            </Button>
-            -->
         </form>
     </Card.Content>
 </Card.Root>
