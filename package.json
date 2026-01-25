@@ -1,6 +1,6 @@
 {
-  "name": "rma-kinetics-gui",
-  "version": "0.1.0",
+  "name": "rma-kinetics-app",
+  "version": "0.1.0-alpha.1",
   "description": "",
   "type": "module",
   "scripts": {
@@ -26,7 +26,7 @@
     "@sveltejs/kit": "^2.49.5",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "@tauri-apps/cli": "^2",
-    "bits-ui": "^2.14.2",
+    "bits-ui": "^2.15.4",
     "clsx": "^2.1.1",
     "embla-carousel-svelte": "^8.6.0",
     "svelte": "^5.0.0",

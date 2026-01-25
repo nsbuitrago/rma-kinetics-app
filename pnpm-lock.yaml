@@ -43,8 +43,8 @@ importers:
         specifier: ^2
         version: 2.9.3
       bits-ui:
-        specifier: ^2.14.2
-        version: 2.14.2(@internationalized/date@3.10.0)(@sveltejs/kit@2.49.5(@sveltejs/vite-plugin-svelte@5.1.1(svelte@5.43.3)(vite@6.4.1(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.43.3)(typescript@5.6.3)(vite@6.4.1(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.43.3)
+        specifier: ^2.15.4
+        version: 2.15.4(@internationalized/date@3.10.0)(@sveltejs/kit@2.48.4(@sveltejs/vite-plugin-svelte@5.1.1(svelte@5.43.3)(vite@6.4.1(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.43.3)(vite@6.4.1(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.43.3)
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -622,8 +622,8 @@ packages:
   binary-search-bounds@2.0.5:
     resolution: {integrity: sha512-H0ea4Fd3lS1+sTEB2TgcLoK21lLhwEJzlQv3IN47pJS976Gx4zoWe0ak3q+uYh60ppQxg9F16Ri4tS1sfD4+jA==}
 
-  bits-ui@2.14.2:
-    resolution: {integrity: sha512-YqpAJj/nRTZjf7IlgUC3QlepVZ7YFiAQWpZaYUOAZFW5Py+g5DYkhEDTdNFI5SReo7l1rct/nRpMK4pfL9Xffw==}
+  bits-ui@2.15.4:
+    resolution: {integrity: sha512-7H9YUfp03KOk1LVDh8wPYSRPxlZgG/GRWLNSA8QC73/8Z8ytun+DWJhIuibyFyz7A0cP/RANVcB4iDrbY8q+Og==}
     engines: {node: '>=20'}
     peerDependencies:
       '@internationalized/date': ^3.8.1
@@ -1521,7 +1521,11 @@ snapshots:
 
   binary-search-bounds@2.0.5: {}
 
+<<<<<<< Updated upstream
   bits-ui@2.14.2(@internationalized/date@3.10.0)(@sveltejs/kit@2.49.5(@sveltejs/vite-plugin-svelte@5.1.1(svelte@5.43.3)(vite@6.4.1(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.43.3)(typescript@5.6.3)(vite@6.4.1(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.43.3):
+=======
+  bits-ui@2.15.4(@internationalized/date@3.10.0)(@sveltejs/kit@2.48.4(@sveltejs/vite-plugin-svelte@5.1.1(svelte@5.43.3)(vite@6.4.1(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.43.3)(vite@6.4.1(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.43.3):
+>>>>>>> Stashed changes
     dependencies:
       '@floating-ui/core': 1.7.3
       '@floating-ui/dom': 1.7.4

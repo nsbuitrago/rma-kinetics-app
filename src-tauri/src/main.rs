@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    rma_kinetics_gui_lib::run()
+    rma_kinetics_app_lib::run()
 }
