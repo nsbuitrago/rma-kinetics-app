@@ -49,7 +49,7 @@
     }
 </script>
 
-<main class="flex gap-10 p-10">
+<main class="grid grid-cols-[1fr_2fr] gap-10 p-10">
     <ModelSelection
         bind:modelType
         bind:solution

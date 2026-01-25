@@ -1,24 +1,19 @@
 <script lang="ts">
- import { Info, Brain, BadgeQuestionMark, BookOpen, Globe } from "@lucide/svelte";
+ import { Brain, BookOpen, Globe, FileText } from "@lucide/svelte";
  import * as Sidebar from "$lib/components/ui/sidebar/index.js";
 
  // link items.
  const links = [
-  // {
-  //  title: "Help",
-  //  url: "#",
-  //  icon: Info,
-  // },
   {
     title: "Documentation",
     url: "https://szablowskilab.github.io/rma-kinetics/docs",
     icon: BookOpen
   },
-  // {
-  //   title: "Paper Link",
-  //   url: "https://",
-  //   icon: FileText
-  // },
+  {
+    title: "Research Paper",
+    url: "https://www.biorxiv.org/content/10.1101/2025.11.17.688787v1",
+    icon: FileText
+  },
   {
    title: "Szablowski Lab Website",
    url: "https://szablowskilab.org",

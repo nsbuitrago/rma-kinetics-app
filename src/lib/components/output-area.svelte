@@ -97,7 +97,7 @@
     });
 </script>
 
-<div class="flex" in:fade={{ duration: 300 }}>
+<div class="flex w-full" in:fade={{ duration: 300 }}>
     <div class="flex flex-col gap-2">
         <h1 class="text-xl">Results</h1>
         <Select.Root type="single" bind:value={speciesType}>

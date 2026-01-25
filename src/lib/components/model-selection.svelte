@@ -57,7 +57,7 @@
 
 <div class="grid gap-2">
     <h1 class="text-xl">Select Model</h1>
-    <Tabs.Root bind:value={modelType} class="w-[400px]">
+    <Tabs.Root bind:value={modelType}>
         <Tabs.List>
             <Tabs.Trigger value="Constitutive">
                 Constitutive
