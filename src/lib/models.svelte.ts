@@ -55,16 +55,15 @@ export class ConstitutiveModel {
     dt: number,
   ): Promise<SimulationResult<{ brain_rma: number; plasma_rma: number }>> {
     if (isTauriEnv) {
-      const result = await invoke<SimulationResult<{ brain_rma: number; plasma_rma: number }>>(
-        "simulate_constitutive_model",
-        {
-          model: this.toJSON(),
-          init_state: init_state.toJSON(),
-          t0,
-          tf,
-          dt,
-        },
-      );
+      const result = await invoke<
+        SimulationResult<{ brain_rma: number; plasma_rma: number }>
+      >("simulate_constitutive_model", {
+        model: this.toJSON(),
+        init_state: init_state.toJSON(),
+        t0,
+        tf,
+        dt,
+      });
 
       return result;
     } else {
@@ -104,7 +103,9 @@ export class TetoffModel {
   tta_deg = $state<number>(1);
   tta_kd = $state<number>(10);
   tta_cooperativity = $state<number>(2);
-  dox_pk_model = $state<DoxModel>(new DoxModel([new AccessPeriod(40, [0, 96])]));
+  dox_pk_model = $state<DoxModel>(
+    new DoxModel([new AccessPeriod(40, [0, 96])]),
+  );
   dox_tta_kd = $state<number>(10);
 
   /**
@@ -149,21 +150,25 @@ export class TetoffModel {
     t0: number,
     tf: number,
     dt: number,
-  ): Promise<SimulationResult<{
-    brain_rma: number;
-    plasma_rma: number;
-    tta: number;
-    plasma_dox: number;
-    brain_dox: number;
-  }>> {
+  ): Promise<
+    SimulationResult<{
+      brain_rma: number;
+      plasma_rma: number;
+      tta: number;
+      plasma_dox: number;
+      brain_dox: number;
+    }>
+  > {
     if (isTauriEnv) {
-      const result = await invoke<SimulationResult<{
-        brain_rma: number;
-        plasma_rma: number;
-        tta: number;
-        plasma_dox: number;
-        brain_dox: number;
-      }>>("simulate_tetoff_model", {
+      const result = await invoke<
+        SimulationResult<{
+          brain_rma: number;
+          plasma_rma: number;
+          tta: number;
+          plasma_dox: number;
+          brain_dox: number;
+        }>
+      >("simulate_tetoff_model", {
         model: this.toJSON(),
         init_state: initState.toJSON(),
         t0,
@@ -217,7 +222,7 @@ export class DoxModel {
   plasma_transport = $state<number>(1);
   plasma_vd = $state<number>(0.21);
   schedule: AccessPeriod[];
-  
+
   /**
    * Construct a new DoxModel with the given schedule.
    * @param schedule - Array of access periods for doxycycline dosing
@@ -225,7 +230,7 @@ export class DoxModel {
   constructor(schedule: AccessPeriod[] = []) {
     this.schedule = $state<AccessPeriod[]>(schedule);
   }
-  
+
   dose_concentration = $derived.by(() => {
     let dose_concentrations = this.schedule.map((period) => {
       return (
@@ -322,7 +327,9 @@ export class ChemogeneticModel {
   tta_deg = $state<number>(2.81e-2);
   tta_kd = $state<number>(4.19);
   tta_cooperativity = $state<number>(2);
-  dox_pk_model = $state<DoxModel>(new DoxModel([new AccessPeriod(40, [0, 24])]));
+  dox_pk_model = $state<DoxModel>(
+    new DoxModel([new AccessPeriod(40, [0, 24])]),
+  );
   dox_tta_kd = $state<number>(5.27);
   cno_pk_model = $state<CnoModel>(new CnoModel());
   cno_ec50 = $state<number>(7.94);
@@ -396,33 +403,37 @@ export class ChemogeneticModel {
     t0: number,
     tf: number,
     dt: number,
-  ): Promise<SimulationResult<{
-    brain_rma: number;
-    plasma_rma: number;
-    tta: number;
-    plasma_dox: number;
-    brain_dox: number;
-    dreadd: number;
-    peritoneal_cno: number;
-    plasma_cno: number;
-    brain_cno: number;
-    plasma_clz: number;
-    brain_clz: number;
-  }>> {
+  ): Promise<
+    SimulationResult<{
+      brain_rma: number;
+      plasma_rma: number;
+      tta: number;
+      plasma_dox: number;
+      brain_dox: number;
+      dreadd: number;
+      peritoneal_cno: number;
+      plasma_cno: number;
+      brain_cno: number;
+      plasma_clz: number;
+      brain_clz: number;
+    }>
+  > {
     if (isTauriEnv) {
-      const result = await invoke<SimulationResult<{
-        brain_rma: number;
-        plasma_rma: number;
-        tta: number;
-        plasma_dox: number;
-        brain_dox: number;
-        dreadd: number;
-        peritoneal_cno: number;
-        plasma_cno: number;
-        brain_cno: number;
-        plasma_clz: number;
-        brain_clz: number;
-      }>>("simulate_chemogenetic_model", {
+      const result = await invoke<
+        SimulationResult<{
+          brain_rma: number;
+          plasma_rma: number;
+          tta: number;
+          plasma_dox: number;
+          brain_dox: number;
+          dreadd: number;
+          peritoneal_cno: number;
+          plasma_cno: number;
+          brain_cno: number;
+          plasma_clz: number;
+          brain_clz: number;
+        }>
+      >("simulate_chemogenetic_model", {
         model: this.toJSON(),
         init_state: initState.toJSON(),
         t0,
@@ -631,16 +642,15 @@ export class OscillatingModel {
     dt: number,
   ): Promise<SimulationResult<{ brain_rma: number; plasma_rma: number }>> {
     if (isTauriEnv) {
-      const result = await invoke<SimulationResult<{ brain_rma: number; plasma_rma: number }>>(
-        "simulate_oscillating_model",
-        {
-          model: this.toJSON(),
-          init_state: init_state.toJSON(),
-          t0,
-          tf,
-          dt,
-        },
-      );
+      const result = await invoke<
+        SimulationResult<{ brain_rma: number; plasma_rma: number }>
+      >("simulate_oscillating_model", {
+        model: this.toJSON(),
+        init_state: init_state.toJSON(),
+        t0,
+        tf,
+        dt,
+      });
 
       return result;
     } else {

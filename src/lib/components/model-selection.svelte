@@ -5,6 +5,7 @@
     import ChemogeneticModel from "$lib/components/chemogenetic-model.svelte";
     import OscillationModel from "$lib/components/oscillating-model.svelte";
     import { browser } from "$app/environment";
+    import { isTauriEnv } from "$lib/models.svelte";
 
     let {
         modelType = $bindable(),
@@ -50,6 +51,7 @@
         }
     }
 
+    const showKeyboardShortcuts = isTauriEnv;
     const isMac = browser && navigator.userAgent.toUpperCase().includes("MAC");
 </script>
 
@@ -62,40 +64,48 @@
             <Tabs.Trigger value="Constitutive">
                 Constitutive
                 <span class="text-sm opacity-75 text-muted-foreground">
-                    {#if isMac}
-                        ⌘1
-                    {:else}
-                        ^1
+                    {#if showKeyboardShortcuts}
+                        {#if isMac}
+                            ⌘1
+                        {:else}
+                            ^1
+                        {/if}
                     {/if}
                 </span>
             </Tabs.Trigger>
             <Tabs.Trigger value="TetOff">
                 Tet-Off
                 <span class="text-sm opacity-75 text-muted-foreground">
-                    {#if isMac}
-                        ⌘2
-                    {:else}
-                        ^2
+                    {#if showKeyboardShortcuts}
+                        {#if isMac}
+                            ⌘2
+                        {:else}
+                            ^2
+                        {/if}
                     {/if}
                 </span>
             </Tabs.Trigger>
             <Tabs.Trigger value="Chemogenetic">
                 Chemogenetic
                 <span class="text-sm opacity-75 text-muted-foreground">
-                    {#if isMac}
-                        ⌘3
-                    {:else}
-                        ^3
+                    {#if showKeyboardShortcuts}
+                        {#if isMac}
+                            ⌘3
+                        {:else}
+                            ^3
+                        {/if}
                     {/if}
                 </span>
             </Tabs.Trigger>
             <Tabs.Trigger value="Oscillating">
                 Oscillating
                 <span class="text-sm opacity-75 text-muted-foreground">
-                    {#if isMac}
-                        ⌘4
-                    {:else}
-                        ^4
+                    {#if showKeyboardShortcuts}
+                        {#if isMac}
+                            ⌘4
+                        {:else}
+                            ^4
+                        {/if}
                     {/if}
                 </span>
             </Tabs.Trigger>
