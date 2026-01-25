@@ -2,19 +2,8 @@
     import { Button } from "$lib/components/ui/button/index.js";
     import { browser } from "$app/environment";
 
-    let { run_simulation } = $props();
-
     const isMac = browser && navigator.userAgent.toUpperCase().includes("MAC");
-
-    function handleKeyDown(event: KeyboardEvent) {
-        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-            event.preventDefault();
-            run_simulation();
-        }
-    }
 </script>
-
-<svelte:window onkeydown={handleKeyDown} />
 
 <Button type="submit">
     Run Simulation

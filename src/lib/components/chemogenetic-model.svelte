@@ -12,7 +12,7 @@
     import DreaddParams from "$lib/components/dreadd-params.svelte";
     import CnoDose from "$lib/components/cno-dose.svelte";
 
-    let { solution = $bindable(), summary = $bindable() } = $props();
+    let { solution = $bindable(), summary = $bindable(), errorMessage = $bindable(), runSimulation = $bindable() } = $props();
 
     // simulation config
     let simulationParams = $state({
@@ -36,13 +36,21 @@
     let cnoDialogOpen = $state<boolean>(false);
 
     async function run_simulation() {
-        [solution, summary] = await model.simulate(
-            initState,
-            simulationParams.t0,
-            simulationParams.tf,
-            simulationParams.dt,
-        );
+        try {
+            [solution, summary] = await model.simulate(
+                initState,
+                simulationParams.t0,
+                simulationParams.tf,
+                simulationParams.dt,
+            );
+            errorMessage = null;
+        } catch (error) {
+            errorMessage = error instanceof Error ? error.message : String(error);
+        }
     }
+
+    // Expose the run_simulation function to parent
+    runSimulation = run_simulation;
 </script>
 
 <Card.Root>
@@ -98,7 +106,7 @@
                 bind:dialogOpen={initCondDialogOpen}
             />
 
-            <SubmitButton {run_simulation} />
+            <SubmitButton />
         </form>
     </Card.Content>
 </Card.Root>

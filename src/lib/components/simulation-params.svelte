@@ -61,6 +61,12 @@
     </div>
     <div class="grid gap-2">
         <Label for="dt">Step size ({params.timeUnits})</Label>
-        <Input type="number" min="1" step="1" id="dt" bind:value={params.dt} />
+        <Input
+            type="number"
+            min="0.001"
+            step="any"
+            id="dt"
+            bind:value={params.dt}
+        />
     </div>
 </div>

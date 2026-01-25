@@ -1,6 +1,29 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 export const isTauriEnv: boolean = isTauri();
 
+/**
+ * Generic solution type returned from Rust simulations.
+ * Contains time points and corresponding state values.
+ */
+export interface SimulationSolution<T> {
+  t: number[];
+  y: T[];
+}
+
+/**
+ * Summary data returned from Rust simulations.
+ */
+export interface SummaryData {
+  species: string;
+  max_concentration: number;
+  tmax: number;
+}
+
+/**
+ * Type alias for simulation results - a tuple of solution and summary data.
+ */
+export type SimulationResult<T> = [SimulationSolution<T>, SummaryData[]];
+
 export class ConstitutiveModel {
   rma_prod = $state<number>(0.2);
   rma_bbb_transport = $state<number>(0.6);
@@ -30,19 +53,23 @@ export class ConstitutiveModel {
     t0: number,
     tf: number,
     dt: number,
-  ) {
+  ): Promise<SimulationResult<{ brain_rma: number; plasma_rma: number }>> {
     if (isTauriEnv) {
-      let solution = await invoke("simulate_constitutive_model", {
-        model: this.toJSON(),
-        init_state: init_state.toJSON(),
-        t0,
-        tf,
-        dt,
-      });
+      const result = await invoke<SimulationResult<{ brain_rma: number; plasma_rma: number }>>(
+        "simulate_constitutive_model",
+        {
+          model: this.toJSON(),
+          init_state: init_state.toJSON(),
+          t0,
+          tf,
+          dt,
+        },
+      );
 
-      return solution;
+      return result;
     } else {
       console.log("running in the browser. Use wasm");
+      throw new Error("WASM implementation not available");
     }
   }
 }
@@ -77,7 +104,7 @@ export class TetoffModel {
   tta_deg = $state<number>(1);
   tta_kd = $state<number>(10);
   tta_cooperativity = $state<number>(2);
-  dox_pk_model = $state<DoxModel>(new DoxModel());
+  dox_pk_model = $state<DoxModel>(new DoxModel([new AccessPeriod(40, [0, 96])]));
   dox_tta_kd = $state<number>(10);
 
   /**
@@ -117,9 +144,26 @@ export class TetoffModel {
    * @param tf
    * @param dt
    */
-  async simulate(initState: TetoffState, t0: number, tf: number, dt: number) {
+  async simulate(
+    initState: TetoffState,
+    t0: number,
+    tf: number,
+    dt: number,
+  ): Promise<SimulationResult<{
+    brain_rma: number;
+    plasma_rma: number;
+    tta: number;
+    plasma_dox: number;
+    brain_dox: number;
+  }>> {
     if (isTauriEnv) {
-      let solution = await invoke("simulate_tetoff_model", {
+      const result = await invoke<SimulationResult<{
+        brain_rma: number;
+        plasma_rma: number;
+        tta: number;
+        plasma_dox: number;
+        brain_dox: number;
+      }>>("simulate_tetoff_model", {
         model: this.toJSON(),
         init_state: initState.toJSON(),
         t0,
@@ -127,9 +171,10 @@ export class TetoffModel {
         dt,
       });
 
-      return solution;
+      return result;
     } else {
       console.log("running in the browser. Use wasm");
+      throw new Error("WASM implementation not available");
     }
   }
 }
@@ -170,8 +215,17 @@ export class DoxModel {
   elimination = $state<number>(0.2);
   brain_transport = $state<number>(0.2);
   plasma_transport = $state<number>(1);
-  plasma_vd = $state<number>(0.021);
-  schedule = $state<AccessPeriod[]>([new AccessPeriod(40, [0, 96])]);
+  plasma_vd = $state<number>(0.21);
+  schedule: AccessPeriod[];
+  
+  /**
+   * Construct a new DoxModel with the given schedule.
+   * @param schedule - Array of access periods for doxycycline dosing
+   */
+  constructor(schedule: AccessPeriod[] = []) {
+    this.schedule = $state<AccessPeriod[]>(schedule);
+  }
+  
   dose_concentration = $derived.by(() => {
     let dose_concentrations = this.schedule.map((period) => {
       return (
@@ -268,10 +322,10 @@ export class ChemogeneticModel {
   tta_deg = $state<number>(2.81e-2);
   tta_kd = $state<number>(4.19);
   tta_cooperativity = $state<number>(2);
-  dox_pk_model = $state<DoxModel>(new DoxModel());
-  dox_tta_kd = $state<number>(10);
+  dox_pk_model = $state<DoxModel>(new DoxModel([new AccessPeriod(40, [0, 24])]));
+  dox_tta_kd = $state<number>(5.27);
   cno_pk_model = $state<CnoModel>(new CnoModel());
-  cno_ec50 = $state<number>(7.97);
+  cno_ec50 = $state<number>(7.94);
   clz_ec50 = $state<number>(4.34);
   cno_cooperativity = $state<number>(1);
   clz_cooperativity = $state<number>(1);
@@ -331,15 +385,44 @@ export class ChemogeneticModel {
   }
 
   /**
-   * Request TetOff simulation
+   * Request Chemogenetic simulation
    * @param initState
    * @param t0
    * @param tf
    * @param dt
    */
-  async simulate(initState: TetoffState, t0: number, tf: number, dt: number) {
+  async simulate(
+    initState: TetoffState,
+    t0: number,
+    tf: number,
+    dt: number,
+  ): Promise<SimulationResult<{
+    brain_rma: number;
+    plasma_rma: number;
+    tta: number;
+    plasma_dox: number;
+    brain_dox: number;
+    dreadd: number;
+    peritoneal_cno: number;
+    plasma_cno: number;
+    brain_cno: number;
+    plasma_clz: number;
+    brain_clz: number;
+  }>> {
     if (isTauriEnv) {
-      let solution = await invoke("simulate_chemogenetic_model", {
+      const result = await invoke<SimulationResult<{
+        brain_rma: number;
+        plasma_rma: number;
+        tta: number;
+        plasma_dox: number;
+        brain_dox: number;
+        dreadd: number;
+        peritoneal_cno: number;
+        plasma_cno: number;
+        brain_cno: number;
+        plasma_clz: number;
+        brain_clz: number;
+      }>>("simulate_chemogenetic_model", {
         model: this.toJSON(),
         init_state: initState.toJSON(),
         t0,
@@ -347,9 +430,10 @@ export class ChemogeneticModel {
         dt,
       });
 
-      return solution;
+      return result;
     } else {
       console.log("running in the browser. Use wasm");
+      throw new Error("WASM implementation not available");
     }
   }
 }
@@ -470,7 +554,7 @@ export class CnoModel {
       cno_brain_transport: this.cno_brain_transport,
       cno_plasma_transport: this.cno_plasma_transport,
       clz_brain_transport: this.clz_brain_transport,
-      clz_plasma_transport: this.clz_brain_transport,
+      clz_plasma_transport: this.clz_plasma_transport,
       cno_plasma_vd: this.cno_plasma_vd,
       cno_brain_vd: this.cno_brain_vd,
       clz_plasma_vd: this.clz_plasma_vd,
@@ -534,7 +618,7 @@ export class OscillatingModel {
   }
 
   /**
-   * Request constitutive simulation
+   * Request oscillating simulation
    * @param init_state
    * @param t0
    * @param tf
@@ -545,19 +629,23 @@ export class OscillatingModel {
     t0: number,
     tf: number,
     dt: number,
-  ) {
+  ): Promise<SimulationResult<{ brain_rma: number; plasma_rma: number }>> {
     if (isTauriEnv) {
-      let solution = await invoke("simulate_oscillating_model", {
-        model: this.toJSON(),
-        init_state: init_state.toJSON(),
-        t0,
-        tf,
-        dt,
-      });
+      const result = await invoke<SimulationResult<{ brain_rma: number; plasma_rma: number }>>(
+        "simulate_oscillating_model",
+        {
+          model: this.toJSON(),
+          init_state: init_state.toJSON(),
+          t0,
+          tf,
+          dt,
+        },
+      );
 
-      return solution;
+      return result;
     } else {
       console.log("running in the browser. Use wasm");
+      throw new Error("WASM implementation not available");
     }
   }
 }

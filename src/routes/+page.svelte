@@ -1,6 +1,7 @@
 <script lang="ts">
     import { dev } from "$app/environment";
     import ModelSelection from "$lib/components/model-selection.svelte";
+    import ModelError from "$lib/components/model-error.svelte";
     import OutputArea from "$lib/components/output-area.svelte";
     import * as Empty from "$lib/components/ui/empty/index.js";
     import { Zap } from "@lucide/svelte";
@@ -23,6 +24,24 @@
         }
     });
 
+    // Error handling state
+    let errorMessage = $state<string | null>(null);
+    let errorOpen = $state<boolean>(false);
+
+    // Sync errorOpen with errorMessage
+    $effect(() => {
+        if (errorMessage !== null) {
+            errorOpen = true;
+        }
+    });
+
+    // Clear error message when dialog is closed
+    $effect(() => {
+        if (!errorOpen) {
+            errorMessage = null;
+        }
+    });
+
     if (dev) {
         $inspect("modelType: ", modelType);
         $inspect("solution: ", solution);
@@ -31,7 +50,12 @@
 </script>
 
 <main class="flex gap-10 p-10">
-    <ModelSelection bind:modelType bind:solution bind:summary />
+    <ModelSelection
+        bind:modelType
+        bind:solution
+        bind:summary
+        bind:errorMessage
+    />
     {#if solution.t.length > 0}
         <OutputArea bind:modelType bind:solution bind:summary />
     {:else}
@@ -54,3 +78,7 @@
         </Empty.Root>
     {/if}
 </main>
+
+{#if errorMessage !== null}
+    <ModelError bind:open={errorOpen} {errorMessage} />
+{/if}

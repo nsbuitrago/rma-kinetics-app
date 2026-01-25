@@ -36,10 +36,12 @@
             style="transform: translateX({cnoView === 'main' ? '0%' : '-100%'})"
         >
             <!-- Main View -->
-            <div class="w-full shrink-0 flex flex-col gap-3 p-6 overflow-hidden">
+            <div
+                class="w-full shrink-0 flex flex-col gap-3 p-6 overflow-hidden"
+            >
                 <div class="grid grid-cols-2 gap-4">
                     <div class="grid gap-2">
-                        <Label for="cno-dose">Dose (mg/kg)</Label>
+                        <Label for="cno-dose">Dose (mg)</Label>
                         <Input
                             type="number"
                             min="0"
@@ -61,7 +63,9 @@
                         />
                     </div>
                 </div>
-                <Button onclick={() => pushCnoDose(new CnoDose(cnoDose, cnoT0))}>
+                <Button
+                    onclick={() => pushCnoDose(new CnoDose(cnoDose, cnoT0))}
+                >
                     Add new CNO dose
                 </Button>
                 <Button
@@ -75,8 +79,12 @@
                     <Table.Root>
                         <Table.Header>
                             <Table.Row>
-                                <Table.Head class="font-bold">Dose (mg/kg)</Table.Head>
-                                <Table.Head class="font-bold">Injection Time</Table.Head>
+                                <Table.Head class="font-bold"
+                                    >Dose (mg)</Table.Head
+                                >
+                                <Table.Head class="font-bold"
+                                    >Injection Time</Table.Head
+                                >
                             </Table.Row>
                         </Table.Header>
                         <Table.Body class="scroll-auto">
@@ -100,7 +108,9 @@
                 </div>
             </div>
             <!-- PK Parameters View -->
-            <div class="w-full shrink-0 flex flex-col gap-3 p-6 overflow-hidden">
+            <div
+                class="w-full shrink-0 flex flex-col gap-3 p-6 overflow-hidden"
+            >
                 <h3 class="font-semibold">PK Parameters</h3>
                 <div class="max-h-96 overflow-y-scroll flex flex-col gap-3">
                     <div class="grid grid-cols-2 gap-4">
@@ -153,7 +163,9 @@
                                 min="0"
                                 step="any"
                                 id="cno-rev-met"
-                                bind:value={model.cno_pk_model.cno_reverse_metabolism}
+                                bind:value={
+                                    model.cno_pk_model.cno_reverse_metabolism
+                                }
                             />
                         </div>
                         <div class="grid gap-2">
@@ -179,7 +191,9 @@
                                 min="0"
                                 step="any"
                                 id="cno-brain-trans"
-                                bind:value={model.cno_pk_model.cno_brain_transport}
+                                bind:value={
+                                    model.cno_pk_model.cno_brain_transport
+                                }
                             />
                         </div>
                         <div class="grid gap-2">
@@ -191,7 +205,9 @@
                                 min="0"
                                 step="any"
                                 id="cno-plasma-trans"
-                                bind:value={model.cno_pk_model.cno_plasma_transport}
+                                bind:value={
+                                    model.cno_pk_model.cno_plasma_transport
+                                }
                             />
                         </div>
                     </div>
@@ -205,7 +221,9 @@
                                 min="0"
                                 step="any"
                                 id="clz-brain-trans"
-                                bind:value={model.cno_pk_model.clz_brain_transport}
+                                bind:value={
+                                    model.cno_pk_model.clz_brain_transport
+                                }
                             />
                         </div>
                         <div class="grid gap-2">
@@ -217,7 +235,9 @@
                                 min="0"
                                 step="any"
                                 id="clz-plasma-trans"
-                                bind:value={model.cno_pk_model.clz_plasma_transport}
+                                bind:value={
+                                    model.cno_pk_model.clz_plasma_transport
+                                }
                             />
                         </div>
                     </div>
@@ -293,7 +313,9 @@
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="grid gap-2">
-                            <Label for="cno-coop">CNO-DREADD Hill Coefficient</Label>
+                            <Label for="cno-coop"
+                                >CNO-DREADD Hill Coefficient</Label
+                            >
                             <Input
                                 type="number"
                                 min="1"
@@ -303,7 +325,9 @@
                             />
                         </div>
                         <div class="grid gap-2">
-                            <Label for="clz-coop">CLZ-DREADD Hill Coefficient</Label>
+                            <Label for="clz-coop"
+                                >CLZ-DREADD Hill Coefficient</Label
+                            >
                             <Input
                                 type="number"
                                 min="1"

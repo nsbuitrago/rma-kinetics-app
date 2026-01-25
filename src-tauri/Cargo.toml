@@ -26,5 +26,5 @@ diffsol = { version = "0.7.0" }
 diffsl = "0.5.4"
 nalgebra = { version = "0.34.1", features = ["serde-serialize"] }
 ndarray = "0.17.1"
-rma-kinetics = { git = "https://github.com/nsbuitrago/rma-kinetics-rs", branch = "dev", features = ["serde"] }
+rma-kinetics = { git = "https://github.com/nsbuitrago/rma-kinetics-rs", branch = "main", features = ["serde"] }
 differential-equations = { version = "0.5.2", features = ["serde"] }

@@ -4140,7 +4140,7 @@ dependencies = [
 [[package]]
 name = "rma-kinetics"
 version = "0.1.1"
-source = "git+https://github.com/nsbuitrago/rma-kinetics-rs?branch=dev#a512fa2201ad92edc2a2c0054781e21a5f98f9d7"
+source = "git+https://github.com/nsbuitrago/rma-kinetics-rs?branch=main#69e2a64866a6d7eb28c0184db297fb578830a371"
 dependencies = [
  "derive_builder",
  "differential-equations",
@@ -4171,7 +4171,7 @@ dependencies = [
 [[package]]
 name = "rma-kinetics-derive"
 version = "0.1.1"
-source = "git+https://github.com/nsbuitrago/rma-kinetics-rs?branch=dev#a512fa2201ad92edc2a2c0054781e21a5f98f9d7"
+source = "git+https://github.com/nsbuitrago/rma-kinetics-rs?branch=main#69e2a64866a6d7eb28c0184db297fb578830a371"
 dependencies = [
  "quote",
  "syn 2.0.111",
