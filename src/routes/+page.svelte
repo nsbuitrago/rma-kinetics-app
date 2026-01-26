@@ -69,7 +69,7 @@
                     >Choose a tab to select a model and run a simulation to view
                     results.
                     <a
-                        href="https://nsbuitrago.github.io/rma-kinetics-rs/docs"
+                        href="https://nsbuitrago.github.io/rma-kinetics-rs/"
                         target="_blank"
                         class="text-muted-foreground">Need help?</a
                     >
