@@ -18,8 +18,28 @@ system. We support and test Windows and MacOS. If you need Linux support, please
 ## Building
 
 This app is built with Tauri and Svelte. To develop on top of this application or build from source,
-make sure that you have `cargo` and `pnpm` installed. You can build the application in development mode
-with `pnpm run tauri dev`. See the [package.json](./package.json) for all available scripts.
+make sure that you have `cargo`, `pnpm`, and `wasm-pack` installed.
+
+### Development
+
+```bash
+# Run in development mode (hot-reload enabled)
+pnpm tauri dev
+```
+
+### Production Build
+
+```bash
+# Build for desktop (Tauri app)
+pnpm tauri build
+
+# Build for web (GitHub Pages)
+pnpm build
+```
+
+**Note:** The first time you run the dev or build command, the WASM package will be built automatically. The desktop Tauri app uses native Rust bindings, while the web version uses WASM.
+
+See the [package.json](./package.json) for all available scripts.
 
 The user interface is built with Svelte and all models are implemented in Rust using the [rma-kinetics-rs](https://github.com/nsbuitrago/rma-kinetics-rs) crate.
 
