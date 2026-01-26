@@ -8,3 +8,7 @@ node_modules
 !.env.example
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# WASM build output
+/src/lib/backend/wasm-pkg
+src-wasm/target

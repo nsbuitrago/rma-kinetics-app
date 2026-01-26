@@ -1,5 +1,5 @@
-import { invoke, isTauri } from "@tauri-apps/api/core";
-export const isTauriEnv: boolean = isTauri();
+import * as backend from "$lib/backend/index.js";
+export const isTauriEnv: boolean = backend.isTauriEnv;
 
 /**
  * Generic solution type returned from Rust simulations.
@@ -54,22 +54,13 @@ export class ConstitutiveModel {
     tf: number,
     dt: number,
   ): Promise<SimulationResult<{ brain_rma: number; plasma_rma: number }>> {
-    if (isTauriEnv) {
-      const result = await invoke<
-        SimulationResult<{ brain_rma: number; plasma_rma: number }>
-      >("simulate_constitutive_model", {
-        model: this.toJSON(),
-        init_state: init_state.toJSON(),
-        t0,
-        tf,
-        dt,
-      });
-
-      return result;
-    } else {
-      console.log("running in the browser. Use wasm");
-      throw new Error("WASM implementation not available");
-    }
+    return backend.simulateConstitutive(
+      this.toJSON(),
+      init_state.toJSON(),
+      t0,
+      tf,
+      dt,
+    );
   }
 }
 
@@ -121,7 +112,7 @@ export class TetoffModel {
     tta_deg: number;
     tta_kd: number;
     tta_cooperativity: number;
-    dox_pk_model: DoxModel;
+    dox_pk_model: ReturnType<DoxModel["toJSON"]>;
     dox_tta_kd: number;
   } {
     return {
@@ -133,7 +124,7 @@ export class TetoffModel {
       tta_deg: this.tta_deg,
       tta_kd: this.tta_kd,
       tta_cooperativity: this.tta_cooperativity,
-      dox_pk_model: this.dox_pk_model,
+      dox_pk_model: this.dox_pk_model.toJSON(),
       dox_tta_kd: this.dox_tta_kd,
     };
   }
@@ -159,28 +150,13 @@ export class TetoffModel {
       brain_dox: number;
     }>
   > {
-    if (isTauriEnv) {
-      const result = await invoke<
-        SimulationResult<{
-          brain_rma: number;
-          plasma_rma: number;
-          tta: number;
-          plasma_dox: number;
-          brain_dox: number;
-        }>
-      >("simulate_tetoff_model", {
-        model: this.toJSON(),
-        init_state: initState.toJSON(),
-        t0,
-        tf,
-        dt,
-      });
-
-      return result;
-    } else {
-      console.log("running in the browser. Use wasm");
-      throw new Error("WASM implementation not available");
-    }
+    return backend.simulateTetoff(
+      this.toJSON(),
+      initState.toJSON(),
+      t0,
+      tf,
+      dt,
+    );
   }
 }
 
@@ -201,14 +177,18 @@ export class AccessPeriod {
   /**
    * Serialize this state to a plain object for Tauri/Rust serialization.
    * Rust expects snake_case field names based on the `rename_all = "snake_case"` attribute.
+   * The time field is serialized as {start, end} to match Rust's RangeInclusive format.
    */
   toJSON(): {
     dose: number;
-    time: [number, number];
+    time: { start: number; end: number };
   } {
     return {
       dose: this.dose,
-      time: this.time,
+      time: {
+        start: this.time[0],
+        end: this.time[1],
+      },
     };
   }
 }
@@ -255,7 +235,7 @@ export class DoxModel {
     brain_transport: number;
     plasma_transport: number;
     plasma_vd: number;
-    schedule: AccessPeriod[];
+    schedule: ReturnType<AccessPeriod["toJSON"]>[];
     dose_concentration: number[];
   } {
     return {
@@ -266,7 +246,7 @@ export class DoxModel {
       brain_transport: this.brain_transport,
       plasma_transport: this.plasma_transport,
       plasma_vd: this.plasma_vd,
-      schedule: this.schedule,
+      schedule: this.schedule.map(period => period.toJSON()),
       dose_concentration: this.dose_concentration,
     };
   }
@@ -355,9 +335,9 @@ export class ChemogeneticModel {
     tta_deg: number;
     tta_kd: number;
     tta_cooperativity: number;
-    dox_pk_model: DoxModel;
+    dox_pk_model: ReturnType<DoxModel["toJSON"]>;
     dox_tta_kd: number;
-    cno_pk_model: CnoModel;
+    cno_pk_model: ReturnType<CnoModel["toJSON"]>;
     cno_ec50: number;
     clz_ec50: number;
     cno_cooperativity: number;
@@ -377,9 +357,9 @@ export class ChemogeneticModel {
       tta_deg: this.tta_deg,
       tta_kd: this.tta_kd,
       tta_cooperativity: this.tta_cooperativity,
-      dox_pk_model: this.dox_pk_model,
+      dox_pk_model: this.dox_pk_model.toJSON(),
       dox_tta_kd: this.dox_tta_kd,
-      cno_pk_model: this.cno_pk_model,
+      cno_pk_model: this.cno_pk_model.toJSON(),
       cno_ec50: this.cno_ec50,
       clz_ec50: this.clz_ec50,
       cno_cooperativity: this.cno_cooperativity,
@@ -418,34 +398,13 @@ export class ChemogeneticModel {
       brain_clz: number;
     }>
   > {
-    if (isTauriEnv) {
-      const result = await invoke<
-        SimulationResult<{
-          brain_rma: number;
-          plasma_rma: number;
-          tta: number;
-          plasma_dox: number;
-          brain_dox: number;
-          dreadd: number;
-          peritoneal_cno: number;
-          plasma_cno: number;
-          brain_cno: number;
-          plasma_clz: number;
-          brain_clz: number;
-        }>
-      >("simulate_chemogenetic_model", {
-        model: this.toJSON(),
-        init_state: initState.toJSON(),
-        t0,
-        tf,
-        dt,
-      });
-
-      return result;
-    } else {
-      console.log("running in the browser. Use wasm");
-      throw new Error("WASM implementation not available");
-    }
+    return backend.simulateChemogenetic(
+      this.toJSON(),
+      initState.toJSON(),
+      t0,
+      tf,
+      dt,
+    );
   }
 }
 
@@ -540,7 +499,7 @@ export class CnoModel {
    * Rust expects snake_case field names based on the `rename_all = "snake_case"` attribute.
    */
   toJSON(): {
-    doses: CnoDose[];
+    doses: ReturnType<CnoDose["toJSON"]>[];
     cno_absorption: number;
     cno_elimination: number;
     cno_reverse_metabolism: number;
@@ -556,7 +515,7 @@ export class CnoModel {
     clz_brain_vd: number;
   } {
     return {
-      doses: this.doses,
+      doses: this.doses.map(dose => dose.toJSON()),
       cno_absorption: this.cno_absorption,
       cno_elimination: this.cno_elimination,
       cno_reverse_metabolism: this.cno_reverse_metabolism,
@@ -641,22 +600,13 @@ export class OscillatingModel {
     tf: number,
     dt: number,
   ): Promise<SimulationResult<{ brain_rma: number; plasma_rma: number }>> {
-    if (isTauriEnv) {
-      const result = await invoke<
-        SimulationResult<{ brain_rma: number; plasma_rma: number }>
-      >("simulate_oscillating_model", {
-        model: this.toJSON(),
-        init_state: init_state.toJSON(),
-        t0,
-        tf,
-        dt,
-      });
-
-      return result;
-    } else {
-      console.log("running in the browser. Use wasm");
-      throw new Error("WASM implementation not available");
-    }
+    return backend.simulateOscillating(
+      this.toJSON(),
+      init_state.toJSON(),
+      t0,
+      tf,
+      dt,
+    );
   }
 }
 

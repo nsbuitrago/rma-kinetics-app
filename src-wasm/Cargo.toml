@@ -1,0 +1,26 @@
+[package]
+name = "rma-kinetics-wasm"
+version = "0.1.0"
+authors = ["nsbuitrago"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+rma-kinetics = { git = "https://github.com/nsbuitrago/rma-kinetics-rs", branch = "main", features = ["serde"] }
+differential-equations = { version = "0.5.2", features = ["serde", "wasm"] }
+getrandom = { version = "0.3", features = ["wasm_js"] }
+console_error_panic_hook = "0.1"
+web-sys = { version = "0.3", features = ["console"] }
+
+[patch.crates-io]
+differential-equations = { git = "https://github.com/nsbuitrago/differential-equations", branch = "wasm" }
+
+
+[profile.release]
+opt-level = "s"
+lto = true
