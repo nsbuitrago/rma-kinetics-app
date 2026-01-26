@@ -5,8 +5,6 @@
     import { ImageDown, Save, Trash } from "@lucide/svelte";
     import { fade } from "svelte/transition";
     import * as Plot from "@observablehq/plot";
-    import { dev } from "$app/environment";
-    import { isTauriEnv } from "$lib/models.svelte";
     import { getSpecies } from "$lib/solution.js";
 
     let {
@@ -95,6 +93,18 @@
 
         plotSpecies();
     });
+
+    function clearOutput() {
+        solution = {
+            t: [],
+            y: [],
+            modelType: solution.modelType,
+        };
+
+        if (plotArea) {
+            plotArea.replaceChildren();
+        }
+    }
 </script>
 
 <div class="flex w-full" in:fade={{ duration: 300 }}>
@@ -149,9 +159,9 @@
                 Export to CSV</Button
             >
         </div> -->
-        <!-- <Button variant="destructive" onclick={clearOutput}>
+        <Button variant="destructive" onclick={clearOutput}>
             <Trash />
             Clear Output</Button
-        > -->
+        >
     </div>
 </div>
