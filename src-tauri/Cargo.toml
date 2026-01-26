@@ -1,6 +1,6 @@
 [package]
 name = "rma-kinetics-app"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 description = "Interface for running kinetic simulations of released markers of activity."
 authors = ["nsbuitrago"]
 edition = "2021"
