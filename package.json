@@ -9,7 +9,7 @@
     "wasm:dev": "cd src-wasm && wasm-pack build --target web --dev --out-dir ../src/lib/backend/wasm-pkg",
     "dev": "pnpm wasm:dev && vite dev",
     "build": "pnpm wasm:build && vite build",
-    "build:tauri": "vite build",
+    "build:tauri": "mkdir -p src/lib/backend/wasm-pkg && cp src/lib/backend/wasm-stub/rma_kinetics_wasm.js src/lib/backend/wasm-pkg/ && vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
