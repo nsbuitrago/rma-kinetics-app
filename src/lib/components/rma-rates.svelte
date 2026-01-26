@@ -24,7 +24,7 @@
     />
 </div>
 
-{#if model.leaky_rma_prod}
+{#if "leaky_rma_prod" in model}
     <div class="grid gap-2">
         <Label for="leaky-rma-prod"
             >Leaky Production Rate ({concentrationUnits}/{timeUnits})</Label

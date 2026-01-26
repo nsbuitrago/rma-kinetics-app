@@ -66,10 +66,10 @@
                 </Empty.Media>
                 <Empty.Title>No Results Available</Empty.Title>
                 <Empty.Description class="flex flex-col gap-5"
-                    >Choose a tab to select a model and run simulation to view
+                    >Choose a tab to select a model and run a simulation to view
                     results.
                     <a
-                        href="https://szablowskilab.github.io/rma-kinetics/docs"
+                        href="https://nsbuitrago.github.io/rma-kinetics-rs/docs"
                         target="_blank"
                         class="text-muted-foreground">Need help?</a
                     >
