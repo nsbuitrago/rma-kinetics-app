@@ -3,6 +3,7 @@
   "version": "0.1.0-alpha.1",
   "description": "",
   "type": "module",
+  "packageManager": "pnpm@10.24.0",
   "scripts": {
     "wasm:build": "cd src-wasm && wasm-pack build --target web --out-dir ../src/lib/backend/wasm-pkg",
     "wasm:dev": "cd src-wasm && wasm-pack build --target web --dev --out-dir ../src/lib/backend/wasm-pkg",
