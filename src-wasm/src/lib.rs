@@ -1,9 +1,7 @@
-use differential_equations::{
-    methods::ExplicitRungeKutta, prelude::DiagonallyImplicitRungeKutta,
-};
+use differential_equations::{methods::ExplicitRungeKutta, prelude::DiagonallyImplicitRungeKutta};
 use rma_kinetics::{
     models::{chemogenetic, cno, constitutive, dox, oscillation, tetoff},
-    Solve,
+    ApplyNoise, Solve,
 };
 use rma_kinetics_common::{get_summary, ModelType};
 use serde::{Deserialize, Serialize};
@@ -280,6 +278,7 @@ pub fn simulate_oscillating_model(
     t0: f64,
     tf: f64,
     dt: f64,
+    noise_level: f64,
 ) -> Result<JsValue, JsError> {
     let model: oscillation::Model = serde_wasm_bindgen::from_value(model)
         .map_err(|e| JsError::new(&format!("Failed to deserialize model: {}", e)))?;
@@ -287,9 +286,14 @@ pub fn simulate_oscillating_model(
         .map_err(|e| JsError::new(&format!("Failed to deserialize init_state: {}", e)))?;
 
     let mut solver = ExplicitRungeKutta::dopri5();
-    let solution = model
+    let mut solution = model
         .solve(t0, tf, dt, init_state, &mut solver)
         .map_err(|e| JsError::new(&e.to_string()))?;
+
+    if noise_level > 0.0 {
+        solution.apply_noise(noise_level);
+    }
+
     let summary = get_summary(&solution, ModelType::Oscillating).map_err(|e| JsError::new(&e))?;
 
     let result = (solution, summary);

@@ -246,7 +246,7 @@ export class DoxModel {
       brain_transport: this.brain_transport,
       plasma_transport: this.plasma_transport,
       plasma_vd: this.plasma_vd,
-      schedule: this.schedule.map(period => period.toJSON()),
+      schedule: this.schedule.map((period) => period.toJSON()),
       dose_concentration: this.dose_concentration,
     };
   }
@@ -515,7 +515,7 @@ export class CnoModel {
     clz_brain_vd: number;
   } {
     return {
-      doses: this.doses.map(dose => dose.toJSON()),
+      doses: this.doses.map((dose) => dose.toJSON()),
       cno_absorption: this.cno_absorption,
       cno_elimination: this.cno_elimination,
       cno_reverse_metabolism: this.cno_reverse_metabolism,
@@ -593,12 +593,14 @@ export class OscillatingModel {
    * @param t0
    * @param tf
    * @param dt
+   * @param noise_level
    */
   async simulate(
     init_state: ConstitutiveState,
     t0: number,
     tf: number,
     dt: number,
+    noise_level: number,
   ): Promise<SimulationResult<{ brain_rma: number; plasma_rma: number }>> {
     return backend.simulateOscillating(
       this.toJSON(),
@@ -606,6 +608,7 @@ export class OscillatingModel {
       t0,
       tf,
       dt,
+      noise_level,
     );
   }
 }

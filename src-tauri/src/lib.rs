@@ -3,7 +3,7 @@ use differential_equations::{
 };
 use rma_kinetics::{
     models::{chemogenetic, constitutive, oscillation, tetoff},
-    Solve,
+    ApplyNoise, Solve,
 };
 use rma_kinetics_common::{get_summary, ModelType, SummaryData};
 
@@ -33,11 +33,17 @@ fn simulate_oscillating_model(
     t0: f64,
     tf: f64,
     dt: f64,
+    noise_level: f64,
 ) -> Result<(Solution<f64, oscillation::State<f64>>, Vec<SummaryData>), String> {
     let mut solver = ExplicitRungeKutta::dopri5();
-    let solution = model
+    let mut solution = model
         .solve(t0, tf, dt, init_state, &mut solver)
         .map_err(|e| e.to_string())?;
+
+    if noise_level > 0.0 {
+        solution.apply_noise(noise_level);
+    }
+
     let summary = get_summary(&solution, ModelType::Oscillating)?;
     Ok((solution, summary))
 }

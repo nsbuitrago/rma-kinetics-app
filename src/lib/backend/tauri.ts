@@ -23,6 +23,7 @@ export async function simulateOscillating(
   t0: number,
   tf: number,
   dt: number,
+  noiseLevel: number,
 ): Promise<SimulationResult<{ brain_rma: number; plasma_rma: number }>> {
   return invoke("simulate_oscillating_model", {
     model,
@@ -30,6 +31,7 @@ export async function simulateOscillating(
     t0,
     tf,
     dt,
+    noise_level: noiseLevel,
   });
 }
 
