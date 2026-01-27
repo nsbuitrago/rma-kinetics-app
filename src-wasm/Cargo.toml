@@ -16,11 +16,4 @@ differential-equations = { version = "0.5.2", features = ["serde", "wasm"] }
 getrandom = { version = "0.3", features = ["wasm_js"] }
 console_error_panic_hook = "0.1"
 web-sys = { version = "0.3", features = ["console"] }
-
-[patch.crates-io]
-differential-equations = { git = "https://github.com/nsbuitrago/differential-equations", branch = "wasm" }
-
-
-[profile.release]
-opt-level = "s"
-lto = true
+rma-kinetics-common = { path = "../src-common" }

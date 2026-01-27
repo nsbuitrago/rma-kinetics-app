@@ -1,11 +1,11 @@
 use differential_equations::{
-    methods::ExplicitRungeKutta, prelude::DiagonallyImplicitRungeKutta, solution::Solution,
-    traits::State as StateTrait,
+    methods::ExplicitRungeKutta, prelude::DiagonallyImplicitRungeKutta,
 };
 use rma_kinetics::{
-    models::{chemogenetic, constitutive, oscillation, tetoff, dox, cno},
-    SolutionAccess, Solve,
+    models::{chemogenetic, cno, constitutive, dox, oscillation, tetoff},
+    Solve,
 };
+use rma_kinetics_common::{get_summary, ModelType};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -13,47 +13,6 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen(start)]
 pub fn init_panic_hook() {
     console_error_panic_hook::set_once();
-}
-
-#[derive(Serialize, Deserialize, PartialEq)]
-pub enum ModelType {
-    Constitutive,
-    TetOff,
-    Chemogenetic,
-    Oscillating,
-}
-
-#[derive(Serialize, Deserialize)]
-pub enum SpeciesType {
-    #[serde(rename(serialize = "Brain RMA"))]
-    BrainRMA,
-    #[serde(rename(serialize = "Plasma RMA"))]
-    PlasmaRMA,
-    #[serde(rename(serialize = "tTA"))]
-    Tta,
-    #[serde(rename(serialize = "Brain Dox"))]
-    BrainDox,
-    #[serde(rename(serialize = "Plasma Dox"))]
-    PlasmaDox,
-    #[serde(rename(serialize = "hM3Dq"))]
-    Dreadd,
-    #[serde(rename(serialize = "Peritoneal CNO"))]
-    PeritonealCno,
-    #[serde(rename(serialize = "Brain CNO"))]
-    BrainCno,
-    #[serde(rename(serialize = "Plasma CNO"))]
-    PlasmaCno,
-    #[serde(rename(serialize = "Brain CLZ"))]
-    BrainClz,
-    #[serde(rename(serialize = "Plasma CLZ"))]
-    PlasmaClz,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct SummaryData {
-    species: SpeciesType,
-    max_concentration: f64,
-    tmax: f64,
 }
 
 // ============================================================================
@@ -103,7 +62,7 @@ impl From<WasmDoxModel> for dox::Model {
             .into_iter()
             .map(|period| period.into())
             .collect();
-        
+
         dox::Model {
             vehicle_intake: wasm.vehicle_intake,
             bioavailability: wasm.bioavailability,
@@ -153,12 +112,8 @@ pub struct WasmCnoModel {
 
 impl From<WasmCnoModel> for cno::Model {
     fn from(wasm: WasmCnoModel) -> Self {
-        let doses: Vec<cno::Dose> = wasm
-            .doses
-            .into_iter()
-            .map(|dose| dose.into())
-            .collect();
-        
+        let doses: Vec<cno::Dose> = wasm.doses.into_iter().map(|dose| dose.into()).collect();
+
         // Use builder pattern if available, otherwise construct directly
         cno::Model::builder()
             .doses(doses)
@@ -198,7 +153,7 @@ pub struct WasmTetoffModel {
 impl From<WasmTetoffModel> for tetoff::Model {
     fn from(wasm: WasmTetoffModel) -> Self {
         let dox_pk_model: dox::Model = wasm.dox_pk_model.into();
-        
+
         tetoff::Model {
             rma_prod: wasm.rma_prod,
             leaky_rma_prod: wasm.leaky_rma_prod,
@@ -243,7 +198,7 @@ impl From<WasmChemogeneticModel> for chemogenetic::Model {
     fn from(wasm: WasmChemogeneticModel) -> Self {
         let dox_pk_model: dox::Model = wasm.dox_pk_model.into();
         let cno_pk_model: cno::Model = wasm.cno_pk_model.into();
-        
+
         chemogenetic::Model {
             rma_prod: wasm.rma_prod,
             leaky_rma_prod: wasm.leaky_rma_prod,
@@ -269,115 +224,6 @@ impl From<WasmChemogeneticModel> for chemogenetic::Model {
     }
 }
 
-fn get_summary<S: StateTrait<f64>>(
-    solution: &Solution<f64, S>,
-    model_type: ModelType,
-) -> Result<Vec<SummaryData>, String>
-where
-    Solution<f64, S>: SolutionAccess,
-{
-    let (plasma_rma_tmax, plasma_rma_max) = solution.max_plasma_rma().map_err(|e| e.to_string())?;
-    let plasma_rma_summary = SummaryData {
-        species: SpeciesType::PlasmaRMA,
-        max_concentration: plasma_rma_max,
-        tmax: plasma_rma_tmax,
-    };
-    let (brain_rma_tmax, brain_rma_max) = solution.max_brain_rma().map_err(|e| e.to_string())?;
-    let brain_rma_summary = SummaryData {
-        species: SpeciesType::BrainRMA,
-        max_concentration: brain_rma_max,
-        tmax: brain_rma_tmax,
-    };
-
-    let mut summary_data = Vec::new();
-
-    if model_type == ModelType::Constitutive || model_type == ModelType::Oscillating {
-        summary_data.extend([plasma_rma_summary, brain_rma_summary]);
-        return Ok(summary_data);
-    }
-
-    let (plasma_dox_tmax, plasma_dox_max) = solution.max_plasma_dox().map_err(|e| e.to_string())?;
-    let plasma_dox_summary = SummaryData {
-        species: SpeciesType::PlasmaDox,
-        max_concentration: plasma_dox_max,
-        tmax: plasma_dox_tmax,
-    };
-
-    let (brain_dox_tmax, brain_dox_max) = solution.max_brain_dox().map_err(|e| e.to_string())?;
-    let brain_dox_summary = SummaryData {
-        species: SpeciesType::BrainDox,
-        max_concentration: brain_dox_max,
-        tmax: brain_dox_tmax,
-    };
-
-    let (tta_tmax, tta_max) = solution.max_tta().map_err(|e| e.to_string())?;
-    let tta_summary = SummaryData {
-        species: SpeciesType::Tta,
-        max_concentration: tta_max,
-        tmax: tta_tmax,
-    };
-
-    summary_data.extend([plasma_dox_summary, brain_dox_summary, tta_summary]);
-
-    if model_type == ModelType::TetOff {
-        return Ok(summary_data);
-    }
-
-    let (dreadd_tmax, dreadd_max) = solution.max_dreadd().map_err(|e| e.to_string())?;
-    let dreadd_summary = SummaryData {
-        species: SpeciesType::Dreadd,
-        max_concentration: dreadd_max,
-        tmax: dreadd_tmax,
-    };
-
-    let (peritoneal_cno_tmax, peritoneal_cno_max) =
-        solution.max_peritoneal_cno().map_err(|e| e.to_string())?;
-    let peritoneal_cno_summary = SummaryData {
-        species: SpeciesType::PeritonealCno,
-        max_concentration: peritoneal_cno_max,
-        tmax: peritoneal_cno_tmax,
-    };
-
-    let (plasma_cno_tmax, plasma_cno_max) = solution.max_plasma_cno().map_err(|e| e.to_string())?;
-    let plasma_cno_summary = SummaryData {
-        species: SpeciesType::PlasmaCno,
-        max_concentration: plasma_cno_max,
-        tmax: plasma_cno_tmax,
-    };
-
-    let (brain_cno_tmax, brain_cno_max) = solution.max_brain_cno().map_err(|e| e.to_string())?;
-    let brain_cno_summary = SummaryData {
-        species: SpeciesType::BrainCno,
-        max_concentration: brain_cno_max,
-        tmax: brain_cno_tmax,
-    };
-
-    let (plasma_clz_tmax, plasma_clz_max) = solution.max_plasma_clz().map_err(|e| e.to_string())?;
-    let plasma_clz_summary = SummaryData {
-        species: SpeciesType::PlasmaClz,
-        max_concentration: plasma_clz_max,
-        tmax: plasma_clz_tmax,
-    };
-
-    let (brain_clz_tmax, brain_clz_max) = solution.max_brain_clz().map_err(|e| e.to_string())?;
-    let brain_clz_summary = SummaryData {
-        species: SpeciesType::BrainClz,
-        max_concentration: brain_clz_max,
-        tmax: brain_clz_tmax,
-    };
-
-    summary_data.extend(vec![
-        dreadd_summary,
-        peritoneal_cno_summary,
-        plasma_cno_summary,
-        brain_cno_summary,
-        plasma_clz_summary,
-        brain_clz_summary,
-    ]);
-
-    Ok(summary_data)
-}
-
 #[wasm_bindgen]
 pub fn simulate_constitutive_model(
     model: JsValue,
@@ -389,14 +235,13 @@ pub fn simulate_constitutive_model(
     web_sys::console::log_1(&"simulate_constitutive_model called in WASM".into());
     web_sys::console::log_2(&"model:".into(), &model);
     web_sys::console::log_2(&"init_state:".into(), &init_state);
-    
-    let model: constitutive::Model = serde_wasm_bindgen::from_value(model)
-        .map_err(|e| {
-            web_sys::console::error_1(&format!("Failed to deserialize model: {}", e).into());
-            JsError::new(&format!("Failed to deserialize model: {}", e))
-        })?;
-    let init_state: constitutive::State<f64> = serde_wasm_bindgen::from_value(init_state)
-        .map_err(|e| {
+
+    let model: constitutive::Model = serde_wasm_bindgen::from_value(model).map_err(|e| {
+        web_sys::console::error_1(&format!("Failed to deserialize model: {}", e).into());
+        JsError::new(&format!("Failed to deserialize model: {}", e))
+    })?;
+    let init_state: constitutive::State<f64> =
+        serde_wasm_bindgen::from_value(init_state).map_err(|e| {
             web_sys::console::error_1(&format!("Failed to deserialize init_state: {}", e).into());
             JsError::new(&format!("Failed to deserialize init_state: {}", e))
         })?;
@@ -414,20 +259,18 @@ pub fn simulate_constitutive_model(
 
     web_sys::console::log_1(&"Solver completed, getting summary".into());
 
-    let summary = get_summary(&solution, ModelType::Constitutive)
-        .map_err(|e| {
-            web_sys::console::error_1(&format!("Summary error: {}", e).into());
-            JsError::new(&e)
-        })?;
+    let summary = get_summary(&solution, ModelType::Constitutive).map_err(|e| {
+        web_sys::console::error_1(&format!("Summary error: {}", e).into());
+        JsError::new(&e)
+    })?;
 
     web_sys::console::log_1(&"Summary completed, serializing result".into());
 
     let result = (solution, summary);
-    serde_wasm_bindgen::to_value(&result)
-        .map_err(|e| {
-            web_sys::console::error_1(&format!("Failed to serialize result: {}", e).into());
-            JsError::new(&format!("Failed to serialize result: {}", e))
-        })
+    serde_wasm_bindgen::to_value(&result).map_err(|e| {
+        web_sys::console::error_1(&format!("Failed to serialize result: {}", e).into());
+        JsError::new(&format!("Failed to serialize result: {}", e))
+    })
 }
 
 #[wasm_bindgen]
@@ -447,8 +290,7 @@ pub fn simulate_oscillating_model(
     let solution = model
         .solve(t0, tf, dt, init_state, &mut solver)
         .map_err(|e| JsError::new(&e.to_string()))?;
-    let summary = get_summary(&solution, ModelType::Oscillating)
-        .map_err(|e| JsError::new(&e))?;
+    let summary = get_summary(&solution, ModelType::Oscillating).map_err(|e| JsError::new(&e))?;
 
     let result = (solution, summary);
     serde_wasm_bindgen::to_value(&result)
@@ -465,21 +307,22 @@ pub fn simulate_tetoff_model(
 ) -> Result<JsValue, JsError> {
     web_sys::console::log_1(&"simulate_tetoff_model called in WASM".into());
     web_sys::console::log_2(&"model:".into(), &model);
-    
+
     // Deserialize to WASM wrapper type first
-    let wasm_model: WasmTetoffModel = serde_wasm_bindgen::from_value(model)
-        .map_err(|e| {
-            web_sys::console::error_1(&format!("Failed to deserialize model: {}", e).into());
-            JsError::new(&format!("Failed to deserialize model: {}", e))
-        })?;
-    
-    web_sys::console::log_1(&"Model deserialized to WASM wrapper, converting to library type".into());
-    
+    let wasm_model: WasmTetoffModel = serde_wasm_bindgen::from_value(model).map_err(|e| {
+        web_sys::console::error_1(&format!("Failed to deserialize model: {}", e).into());
+        JsError::new(&format!("Failed to deserialize model: {}", e))
+    })?;
+
+    web_sys::console::log_1(
+        &"Model deserialized to WASM wrapper, converting to library type".into(),
+    );
+
     // Convert to library type
     let model: tetoff::Model = wasm_model.into();
-    
-    let init_state: tetoff::State<f64> = serde_wasm_bindgen::from_value(init_state)
-        .map_err(|e| {
+
+    let init_state: tetoff::State<f64> =
+        serde_wasm_bindgen::from_value(init_state).map_err(|e| {
             web_sys::console::error_1(&format!("Failed to deserialize init_state: {}", e).into());
             JsError::new(&format!("Failed to deserialize init_state: {}", e))
         })?;
@@ -493,23 +336,21 @@ pub fn simulate_tetoff_model(
             web_sys::console::error_1(&format!("Solver error: {}", e).into());
             JsError::new(&e.to_string())
         })?;
-    
+
     web_sys::console::log_1(&"Solver completed, getting summary".into());
-    
-    let summary = get_summary(&solution, ModelType::TetOff)
-        .map_err(|e| {
-            web_sys::console::error_1(&format!("Summary error: {}", e).into());
-            JsError::new(&e)
-        })?;
+
+    let summary = get_summary(&solution, ModelType::TetOff).map_err(|e| {
+        web_sys::console::error_1(&format!("Summary error: {}", e).into());
+        JsError::new(&e)
+    })?;
 
     web_sys::console::log_1(&"Summary completed, serializing result".into());
 
     let result = (solution, summary);
-    serde_wasm_bindgen::to_value(&result)
-        .map_err(|e| {
-            web_sys::console::error_1(&format!("Failed to serialize result: {}", e).into());
-            JsError::new(&format!("Failed to serialize result: {}", e))
-        })
+    serde_wasm_bindgen::to_value(&result).map_err(|e| {
+        web_sys::console::error_1(&format!("Failed to serialize result: {}", e).into());
+        JsError::new(&format!("Failed to serialize result: {}", e))
+    })
 }
 
 #[wasm_bindgen]
@@ -522,21 +363,22 @@ pub fn simulate_chemogenetic_model(
 ) -> Result<JsValue, JsError> {
     web_sys::console::log_1(&"simulate_chemogenetic_model called in WASM".into());
     web_sys::console::log_2(&"model:".into(), &model);
-    
+
     // Deserialize to WASM wrapper type first
-    let wasm_model: WasmChemogeneticModel = serde_wasm_bindgen::from_value(model)
-        .map_err(|e| {
-            web_sys::console::error_1(&format!("Failed to deserialize model: {}", e).into());
-            JsError::new(&format!("Failed to deserialize model: {}", e))
-        })?;
-    
-    web_sys::console::log_1(&"Model deserialized to WASM wrapper, converting to library type".into());
-    
+    let wasm_model: WasmChemogeneticModel = serde_wasm_bindgen::from_value(model).map_err(|e| {
+        web_sys::console::error_1(&format!("Failed to deserialize model: {}", e).into());
+        JsError::new(&format!("Failed to deserialize model: {}", e))
+    })?;
+
+    web_sys::console::log_1(
+        &"Model deserialized to WASM wrapper, converting to library type".into(),
+    );
+
     // Convert to library type
     let model: chemogenetic::Model = wasm_model.into();
-    
-    let init_state: chemogenetic::State<f64> = serde_wasm_bindgen::from_value(init_state)
-        .map_err(|e| {
+
+    let init_state: chemogenetic::State<f64> =
+        serde_wasm_bindgen::from_value(init_state).map_err(|e| {
             web_sys::console::error_1(&format!("Failed to deserialize init_state: {}", e).into());
             JsError::new(&format!("Failed to deserialize init_state: {}", e))
         })?;
@@ -550,21 +392,19 @@ pub fn simulate_chemogenetic_model(
             web_sys::console::error_1(&format!("Solver error: {}", e).into());
             JsError::new(&e.to_string())
         })?;
-    
+
     web_sys::console::log_1(&"Solver completed, getting summary".into());
-    
-    let summary = get_summary(&solution, ModelType::Chemogenetic)
-        .map_err(|e| {
-            web_sys::console::error_1(&format!("Summary error: {}", e).into());
-            JsError::new(&e)
-        })?;
+
+    let summary = get_summary(&solution, ModelType::Chemogenetic).map_err(|e| {
+        web_sys::console::error_1(&format!("Summary error: {}", e).into());
+        JsError::new(&e)
+    })?;
 
     web_sys::console::log_1(&"Summary completed, serializing result".into());
 
     let result = (solution, summary);
-    serde_wasm_bindgen::to_value(&result)
-        .map_err(|e| {
-            web_sys::console::error_1(&format!("Failed to serialize result: {}", e).into());
-            JsError::new(&format!("Failed to serialize result: {}", e))
-        })
+    serde_wasm_bindgen::to_value(&result).map_err(|e| {
+        web_sys::console::error_1(&format!("Failed to serialize result: {}", e).into());
+        JsError::new(&format!("Failed to serialize result: {}", e))
+    })
 }

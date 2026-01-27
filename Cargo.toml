@@ -1,0 +1,25 @@
+[workspace]
+resolver = "2"
+members = [
+    "src-common",
+    "src-tauri",
+    "src-wasm",
+]
+
+[workspace.package]
+authors = ["nsbuitrago"]
+edition = "2021"
+version = "0.1.0-alpha.1"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+differential-equations = { version = "0.5.2", features = ["serde"] }
+rma-kinetics = { git = "https://github.com/nsbuitrago/rma-kinetics-rs", branch = "main", features = ["serde"] }
+
+[patch.crates-io]
+differential-equations = { git = "https://github.com/nsbuitrago/differential-equations", branch = "wasm" }
+
+[profile.release]
+opt-level = "s"
+lto = true
+

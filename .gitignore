@@ -12,3 +12,5 @@ vite.config.ts.timestamp-*
 # WASM build output
 /src/lib/backend/wasm-pkg
 src-wasm/target
+
+**/target

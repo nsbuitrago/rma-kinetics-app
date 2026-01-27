@@ -1,0 +1,11 @@
+[package]
+name = "rma-kinetics-common"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "Common types and utilities shared between Tauri and WASM backends"
+
+[dependencies]
+serde.workspace = true
+differential-equations.workspace = true
+rma-kinetics.workspace = true
