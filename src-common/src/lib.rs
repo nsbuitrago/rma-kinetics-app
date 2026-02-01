@@ -17,7 +17,7 @@ pub struct SummaryData {
 // Enums
 // ============================================================================
 
-#[derive(Serialize, Deserialize, PartialEq)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub enum ModelType {
     Constitutive,
     TetOff,

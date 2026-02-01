@@ -4,9 +4,16 @@
     import RmaRates from "$lib/components/rma-rates.svelte";
     import InitState from "$lib/components/init-state.svelte";
     import SubmitButton from "$lib/components/submit-button.svelte";
+    import { Input } from "$lib/components/ui/input/index.js";
+    import { Label } from "$lib/components/ui/label/index.js";
     import { OscillatingModel, OscillatingState } from "$lib/models.svelte";
 
-    let { solution = $bindable(), summary = $bindable(), errorMessage = $bindable(), runSimulation = $bindable() } = $props();
+    let {
+        solution = $bindable(),
+        summary = $bindable(),
+        errorMessage = $bindable(),
+        runSimulation = $bindable(),
+    } = $props();
 
     // simulation config
     let simulationParams = $state({
@@ -19,6 +26,7 @@
 
     // model
     let model = $state<OscillatingModel>(new OscillatingModel());
+    let noiseLevel = $state<number>(0);
     let initState = $state<OscillatingState>(new OscillatingState());
     let initCondDialogOpen = $state<boolean>(false);
 
@@ -29,10 +37,12 @@
                 simulationParams.t0,
                 simulationParams.tf,
                 simulationParams.dt,
+                noiseLevel,
             );
             errorMessage = null;
         } catch (error) {
-            errorMessage = error instanceof Error ? error.message : String(error);
+            errorMessage =
+                error instanceof Error ? error.message : String(error);
         }
     }
 
@@ -44,7 +54,11 @@
     <Card.Header>
         <Card.Title>Oscillating RMA</Card.Title>
         <Card.Description class="grid gap-2">
-            <p>RMA expression driven by an oscillating force function.</p>
+            <p>
+                RMA expression driven by an oscillating force function. To apply
+                Gaussian noise to the plasma RMA, use the <em>Noise Level</em>
+                parameter.
+            </p>
         </Card.Description>
     </Card.Header>
     <Card.Content>
@@ -55,6 +69,16 @@
                 bind:timeUnits={simulationParams.timeUnits}
                 bind:model
             />
+            <div class="grid gap-2">
+                <Label for="noise-level">Noise Level</Label>
+                <Input
+                    type="number"
+                    min="0"
+                    step="any"
+                    id="noise-level"
+                    bind:value={noiseLevel}
+                />
+            </div>
             <InitState
                 bind:simulationParams
                 bind:initState

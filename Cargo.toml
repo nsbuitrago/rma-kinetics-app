@@ -9,12 +9,12 @@ members = [
 [workspace.package]
 authors = ["nsbuitrago"]
 edition = "2021"
-version = "0.1.0-alpha.1"
+version = "0.1.0-beta.0"
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 differential-equations = { version = "0.5.2", features = ["serde"] }
-rma-kinetics = { git = "https://github.com/nsbuitrago/rma-kinetics-rs", branch = "main", features = ["serde"] }
+rma-kinetics = { git = "https://github.com/nsbuitrago/rma-kinetics-rs", branch = "main", features = ["serde", "polars-wasm"] }
 
 [patch.crates-io]
 differential-equations = { git = "https://github.com/nsbuitrago/differential-equations", branch = "wasm" }
@@ -22,4 +22,3 @@ differential-equations = { git = "https://github.com/nsbuitrago/differential-equ
 [profile.release]
 opt-level = "s"
 lto = true
-

@@ -3,7 +3,10 @@ import { isTauri } from "@tauri-apps/api/core";
 export const isTauriEnv = isTauri();
 
 // Lazy-loaded backend implementations
-let backendModule: typeof import("./tauri.js") | typeof import("./wasm.js") | null = null;
+let backendModule:
+  | typeof import("./tauri.js")
+  | typeof import("./wasm.js")
+  | null = null;
 
 async function getBackend() {
   if (backendModule) {
@@ -36,9 +39,10 @@ export async function simulateOscillating(
   t0: number,
   tf: number,
   dt: number,
+  noiseLevel: number,
 ) {
   const backend = await getBackend();
-  return backend.simulateOscillating(model, initState, t0, tf, dt);
+  return backend.simulateOscillating(model, initState, t0, tf, dt, noiseLevel);
 }
 
 export async function simulateTetoff(
@@ -61,4 +65,13 @@ export async function simulateChemogenetic(
 ) {
   const backend = await getBackend();
   return backend.simulateChemogenetic(model, initState, t0, tf, dt);
+}
+
+export async function CsvExport(
+  solution: unknown,
+  modelType: string,
+  format: string,
+) {
+  const backend = await getBackend();
+  return backend.CsvExport(solution, modelType, format);
 }

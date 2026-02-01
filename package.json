@@ -1,6 +1,6 @@
 {
   "name": "rma-kinetics-app",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-beta.0",
   "description": "",
   "type": "module",
   "packageManager": "pnpm@10.24.0",
@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@internationalized/date": "^3.10.0",
-    "@lucide/svelte": "^0.544.0",
+    "@lucide/svelte": "^0.561.0",
     "@sveltejs/adapter-static": "^3.0.6",
     "@sveltejs/kit": "^2.49.5",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",

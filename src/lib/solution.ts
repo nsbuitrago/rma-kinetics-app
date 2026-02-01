@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { isTauriEnv } from "./models.svelte";
+import * as backend from "$lib/backend/index.js";
 
 /**
  * Generic solution state - all possible fields from any model.
@@ -114,20 +115,12 @@ export interface SummaryStat {
   tmax: number;
 }
 
-export async function get_summary_stats(
+export const exportSimulation = async (
   solution: Solution,
-  speciesType: SpeciesType,
-): Promise<SummaryStat[]> {
-  let summary_stats: SummaryStat[];
-  if (isTauriEnv) {
-    summary_stats = await invoke("get_summary_stat", {
-      solution,
-      speciesType,
-    });
-  } else {
-    // TODO: wasm implementation
-    summary_stats = [];
+  modelType: string,
+  format: "csv" | "parquet" | "json" = "csv",
+) => {
+  if (format === "csv") {
+    await backend.CsvExport(solution, modelType, format);
   }
-
-  return summary_stats;
-}
+};

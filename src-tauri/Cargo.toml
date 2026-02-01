@@ -1,6 +1,6 @@
 [package]
 name = "rma-kinetics-app"
-version = "0.1.0-alpha.1"
+version = "0.1.0-beta.0"
 description = "Interface for running kinetic simulations of released markers of activity."
 authors = ["nsbuitrago"]
 edition = "2021"
@@ -20,11 +20,13 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-rma-kinetics = { git = "https://github.com/nsbuitrago/rma-kinetics-rs", branch = "main", features = ["serde"] }
+rma-kinetics = { git = "https://github.com/nsbuitrago/rma-kinetics-rs", branch = "main", features = ["serde", "polars-native"] }
 differential-equations = { version = "0.5.2", features = ["serde"] }
 rma-kinetics-common = { path = "../src-common" }
+polars = { version = "0.52", default-features = false, features = ["polars-io", "csv"] }
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-updater = "2"

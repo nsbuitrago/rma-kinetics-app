@@ -32,8 +32,20 @@ export async function simulateConstitutive(
 ): Promise<SimulationResult<{ brain_rma: number; plasma_rma: number }>> {
   const wasm = await ensureInit();
   try {
-    console.log("WASM simulateConstitutive called with:", { model, initState, t0, tf, dt });
-    const result = wasm.simulate_constitutive_model(model, initState, t0, tf, dt);
+    console.log("WASM simulateConstitutive called with:", {
+      model,
+      initState,
+      t0,
+      tf,
+      dt,
+    });
+    const result = wasm.simulate_constitutive_model(
+      model,
+      initState,
+      t0,
+      tf,
+      dt,
+    );
     console.log("WASM result:", result);
     return result;
   } catch (error) {
@@ -48,9 +60,17 @@ export async function simulateOscillating(
   t0: number,
   tf: number,
   dt: number,
+  noiseLevel: number,
 ): Promise<SimulationResult<{ brain_rma: number; plasma_rma: number }>> {
   const wasm = await ensureInit();
-  return wasm.simulate_oscillating_model(model, initState, t0, tf, dt);
+  return wasm.simulate_oscillating_model(
+    model,
+    initState,
+    t0,
+    tf,
+    dt,
+    noiseLevel,
+  );
 }
 
 export async function simulateTetoff(
@@ -95,4 +115,13 @@ export async function simulateChemogenetic(
 > {
   const wasm = await ensureInit();
   return wasm.simulate_chemogenetic_model(model, initState, t0, tf, dt);
+}
+
+export async function CsvExport(
+  solution: unknown,
+  modelType: string,
+  _format: string,
+): Promise<void> {
+  const wasm = await ensureInit();
+  return wasm.export_csv(solution, modelType, undefined);
 }
