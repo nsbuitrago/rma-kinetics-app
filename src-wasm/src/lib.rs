@@ -1,4 +1,7 @@
-use differential_equations::{methods::ExplicitRungeKutta, prelude::DiagonallyImplicitRungeKutta};
+use differential_equations::{
+    methods::ExplicitRungeKutta,
+    prelude::{DiagonallyImplicitRungeKutta, Solution},
+};
 use rma_kinetics::{
     models::{chemogenetic, cno, constitutive, dox, oscillation, tetoff},
     ApplyNoise, Solve,
@@ -411,4 +414,146 @@ pub fn simulate_chemogenetic_model(
         web_sys::console::error_1(&format!("Failed to serialize result: {}", e).into());
         JsError::new(&format!("Failed to serialize result: {}", e))
     })
+}
+
+/// Export a solution to CSV and trigger browser download.
+///
+/// # Arguments
+/// * `solution` - The solution object from a simulation
+/// * `model_type` - The model type (Constitutive, Oscillating, TetOff, or Chemogenetic)
+/// * `filename` - Optional filename for the download (defaults to "solution.csv")
+#[wasm_bindgen]
+pub fn export_csv(
+    solution: JsValue,
+    model_type: JsValue,
+    filename: Option<String>,
+) -> Result<(), JsError> {
+    use polars::prelude::SerWriter;
+    use rma_kinetics::ToDataFrame;
+
+    web_sys::console::log_1(&"export_csv called".into());
+
+    // Deserialize model type
+    let model_type: rma_kinetics_common::ModelType = serde_wasm_bindgen::from_value(model_type)
+        .map_err(|e| {
+            web_sys::console::error_1(&format!("Failed to deserialize model_type: {}", e).into());
+            JsError::new(&format!("Failed to deserialize model_type: {}", e))
+        })?;
+
+    web_sys::console::log_1(&format!("Model type: {:?}", model_type).into());
+
+    // Deserialize solution and convert to DataFrame based on model type
+    let mut df = match model_type {
+        rma_kinetics_common::ModelType::Constitutive => {
+            let sol: Solution<f64, constitutive::State<f64>> =
+                serde_wasm_bindgen::from_value(solution).map_err(|e| {
+                    web_sys::console::error_1(
+                        &format!("Failed to deserialize solution: {}", e).into(),
+                    );
+                    JsError::new(&format!("Failed to deserialize solution: {}", e))
+                })?;
+            sol.to_dataframe()
+        }
+        rma_kinetics_common::ModelType::Oscillating => {
+            let sol: Solution<f64, oscillation::State<f64>> =
+                serde_wasm_bindgen::from_value(solution).map_err(|e| {
+                    web_sys::console::error_1(
+                        &format!("Failed to deserialize solution: {}", e).into(),
+                    );
+                    JsError::new(&format!("Failed to deserialize solution: {}", e))
+                })?;
+            sol.to_dataframe()
+        }
+        rma_kinetics_common::ModelType::TetOff => {
+            let sol: Solution<f64, tetoff::State<f64>> = serde_wasm_bindgen::from_value(solution)
+                .map_err(|e| {
+                web_sys::console::error_1(&format!("Failed to deserialize solution: {}", e).into());
+                JsError::new(&format!("Failed to deserialize solution: {}", e))
+            })?;
+            sol.to_dataframe()
+        }
+        rma_kinetics_common::ModelType::Chemogenetic => {
+            let sol: Solution<f64, chemogenetic::State<f64>> =
+                serde_wasm_bindgen::from_value(solution).map_err(|e| {
+                    web_sys::console::error_1(
+                        &format!("Failed to deserialize solution: {}", e).into(),
+                    );
+                    JsError::new(&format!("Failed to deserialize solution: {}", e))
+                })?;
+            sol.to_dataframe()
+        }
+    }
+    .map_err(|e| {
+        web_sys::console::error_1(&format!("Failed to convert to dataframe: {}", e).into());
+        JsError::new(&format!("Failed to convert to dataframe: {}", e))
+    })?;
+
+    web_sys::console::log_1(&"DataFrame created successfully".into());
+
+    // Convert DataFrame to CSV string
+    let mut buf = Vec::new();
+    polars::io::csv::write::CsvWriter::new(&mut buf)
+        .finish(&mut df)
+        .map_err(|e| {
+            web_sys::console::error_1(&format!("Failed to write CSV: {}", e).into());
+            JsError::new(&format!("Failed to write CSV: {}", e))
+        })?;
+
+    let csv_string = String::from_utf8(buf).map_err(|e| {
+        web_sys::console::error_1(&format!("Invalid UTF-8 in CSV: {}", e).into());
+        JsError::new(&format!("Invalid UTF-8 in CSV: {}", e))
+    })?;
+
+    web_sys::console::log_1(&format!("CSV generated, {} bytes", csv_string.len()).into());
+
+    // Trigger browser download
+    trigger_download(
+        &csv_string,
+        &filename.unwrap_or_else(|| "solution.csv".to_string()),
+    )?;
+
+    web_sys::console::log_1(&"Download triggered successfully".into());
+
+    Ok(())
+}
+
+/// Helper function to trigger a browser download of CSV data.
+fn trigger_download(content: &str, filename: &str) -> Result<(), JsError> {
+    use wasm_bindgen::JsCast;
+    use web_sys::{Blob, BlobPropertyBag, HtmlAnchorElement, Url};
+
+    let window = web_sys::window().ok_or_else(|| JsError::new("No window object"))?;
+    let document = window
+        .document()
+        .ok_or_else(|| JsError::new("No document object"))?;
+
+    // Create Blob from CSV content
+    let parts = js_sys::Array::new();
+    parts.push(&JsValue::from_str(content));
+
+    let opts = BlobPropertyBag::new();
+    opts.set_type("text/csv;charset=utf-8");
+
+    let blob = Blob::new_with_str_sequence_and_options(&parts, &opts)
+        .map_err(|_| JsError::new("Failed to create Blob"))?;
+
+    // Create object URL
+    let url = Url::create_object_url_with_blob(&blob)
+        .map_err(|_| JsError::new("Failed to create object URL"))?;
+
+    // Create and click anchor element
+    let anchor: HtmlAnchorElement = document
+        .create_element("a")
+        .map_err(|_| JsError::new("Failed to create anchor element"))?
+        .dyn_into()
+        .map_err(|_| JsError::new("Failed to cast to anchor"))?;
+
+    anchor.set_href(&url);
+    anchor.set_download(filename);
+    anchor.click();
+
+    // Cleanup
+    Url::revoke_object_url(&url).map_err(|_| JsError::new("Failed to revoke object URL"))?;
+
+    Ok(())
 }

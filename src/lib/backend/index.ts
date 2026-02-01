@@ -66,3 +66,12 @@ export async function simulateChemogenetic(
   const backend = await getBackend();
   return backend.simulateChemogenetic(model, initState, t0, tf, dt);
 }
+
+export async function CsvExport(
+  solution: unknown,
+  modelType: string,
+  format: string,
+) {
+  const backend = await getBackend();
+  return backend.CsvExport(solution, modelType, format);
+}

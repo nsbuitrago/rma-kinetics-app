@@ -2,10 +2,11 @@
     import * as Select from "$lib/components/ui/select/index.js";
     import { Button } from "$lib/components/ui/button/index.js";
     import * as Table from "$lib/components/ui/table/index.js";
+    import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
     import { ImageDown, Save, Trash } from "@lucide/svelte";
     import { fade } from "svelte/transition";
     import * as Plot from "@observablehq/plot";
-    import { getSpecies } from "$lib/solution.js";
+    import { getSpecies, exportSimulation } from "$lib/solution.js";
 
     let {
         modelType = $bindable(),
@@ -149,16 +150,24 @@
         </Table.Root>
     </div>
     <div class="flex flex-col justify-between gap-2 h-1/2 p-10">
-        <!-- <div class="flex flex-col gap-5">
-            <Button>
+        <div class="flex flex-col gap-5">
+            <!-- <Button>
                 <ImageDown />
                 Save Plot</Button
-            >
-            <Button variant="outline">
-                <Save />
-                Export to CSV</Button
-            >
-        </div> -->
+            > -->
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger>
+                {#snippet child({ props })}
+                  <Button {...props} variant="outline">Export</Button>
+                {/snippet}
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content align="start">
+                  <DropdownMenu.Item onclick={() => exportSimulation(solution, modelType)}>
+                    CSV
+                  </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+        </div>
         <Button variant="destructive" onclick={clearOutput}>
             <Trash />
             Clear Output</Button

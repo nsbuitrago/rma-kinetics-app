@@ -88,3 +88,14 @@ export async function simulateChemogenetic(
     dt,
   });
 }
+
+export async function CsvExport(
+  solution: unknown,
+  modelType: string,
+  _format: string,
+): Promise<void> {
+  return invoke("export_csv", {
+    solution,
+    model_type: modelType,
+  });
+}

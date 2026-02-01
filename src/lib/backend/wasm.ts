@@ -116,3 +116,12 @@ export async function simulateChemogenetic(
   const wasm = await ensureInit();
   return wasm.simulate_chemogenetic_model(model, initState, t0, tf, dt);
 }
+
+export async function CsvExport(
+  solution: unknown,
+  modelType: string,
+  _format: string,
+): Promise<void> {
+  const wasm = await ensureInit();
+  return wasm.export_csv(solution, modelType, undefined);
+}
