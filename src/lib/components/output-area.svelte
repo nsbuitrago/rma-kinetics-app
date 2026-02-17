@@ -3,10 +3,10 @@
     import { Button } from "$lib/components/ui/button/index.js";
     import * as Table from "$lib/components/ui/table/index.js";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
-    import { ImageDown, Save, Trash } from "@lucide/svelte";
+    import { Download, ImageDown, Save, Trash } from "@lucide/svelte";
     import { fade } from "svelte/transition";
     import * as Plot from "@observablehq/plot";
-    import { getSpecies, exportSimulation } from "$lib/solution.js";
+    import { getSpecies, exportSimulation, saveImage } from "$lib/solution.js";
 
     let {
         modelType = $bindable(),
@@ -151,14 +151,17 @@
     </div>
     <div class="flex flex-col justify-between gap-2 h-1/2 p-10">
         <div class="flex flex-col gap-5">
-            <!-- <Button>
+            <Button onclick={() => saveImage(plotArea, speciesType)}>
                 <ImageDown />
                 Save Plot</Button
-            > -->
+            >
             <DropdownMenu.Root>
               <DropdownMenu.Trigger>
                 {#snippet child({ props })}
-                  <Button {...props} variant="outline">Export</Button>
+                  <Button {...props} variant="outline">
+                      <Download />
+                      Export
+                  </Button>
                 {/snippet}
               </DropdownMenu.Trigger>
               <DropdownMenu.Content align="start">

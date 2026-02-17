@@ -136,6 +136,29 @@ async fn export_csv(
     Ok(())
 }
 
+#[tauri::command(rename_all = "snake_case")]
+async fn save_image(
+    app: tauri::AppHandle,
+    svg: String,
+    species_name: String,
+) -> Result<(), String> {
+    use tauri_plugin_dialog::DialogExt as _;
+
+    // Show native save dialog
+    let file_path = app
+        .dialog()
+        .file()
+        .add_filter("SVG", &["svg"])
+        .set_file_name(format!("{}.svg", species_name))
+        .blocking_save_file()
+        .ok_or("Save dialog cancelled")?;
+
+    let path = file_path.as_path().ok_or("Invalid file path")?;
+    std::fs::write(path, &svg).map_err(|e| format!("Failed to write file: {}", e))?;
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -154,6 +177,7 @@ pub fn run() {
             simulate_chemogenetic_model,
             simulate_oscillating_model,
             export_csv,
+            save_image,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
