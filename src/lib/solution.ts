@@ -121,6 +121,16 @@ export const exportSimulation = async (
   format: "csv" | "parquet" | "json" = "csv",
 ) => {
   if (format === "csv") {
-    await backend.CsvExport(solution, modelType, format);
+    await backend.csvExport(solution, modelType, format);
   }
+};
+
+export const saveImage = async (element: HTMLElement, speciesName: string) => {
+  const svgElement = element.querySelector('svg');
+  if (!svgElement) {
+    throw new Error('No SVG element found in plot area');
+  }
+  const serializer = new XMLSerializer();
+  const svgString = serializer.serializeToString(svgElement);
+  await backend.saveImage(svgString, speciesName);
 };

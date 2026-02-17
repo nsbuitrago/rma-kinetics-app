@@ -67,11 +67,16 @@ export async function simulateChemogenetic(
   return backend.simulateChemogenetic(model, initState, t0, tf, dt);
 }
 
-export async function CsvExport(
+export async function csvExport(
   solution: unknown,
   modelType: string,
   format: string,
 ) {
   const backend = await getBackend();
-  return backend.CsvExport(solution, modelType, format);
+  return backend.csvExport(solution, modelType, format);
+}
+
+export async function saveImage(svg: string, speciesName: string) {
+  const backend = await getBackend();
+  return backend.saveImage(svg, speciesName);
 }
