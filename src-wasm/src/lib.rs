@@ -510,6 +510,7 @@ pub fn export_csv(
     trigger_download(
         &csv_string,
         &filename.unwrap_or_else(|| "solution.csv".to_string()),
+        "text/csv;charset=utf-8",
     )?;
 
     web_sys::console::log_1(&"Download triggered successfully".into());
@@ -517,8 +518,18 @@ pub fn export_csv(
     Ok(())
 }
 
-/// Helper function to trigger a browser download of CSV data.
-fn trigger_download(content: &str, filename: &str) -> Result<(), JsError> {
+/// Trigger browser download for the passed svg image content.
+///
+/// # Arguments
+/// * `svg` - The svg string to save
+/// * `species_name` - The species name to use in the default filepath.
+#[wasm_bindgen]
+pub fn save_image(svg: String, species_name: String) -> Result<(), JsError> {
+    trigger_download(&svg, &format!("{}.svg", species_name), "image/svg+xml")
+}
+
+/// Helper function to trigger a browser download of content with specified MIME type.
+fn trigger_download(content: &str, filename: &str, mime_type: &str) -> Result<(), JsError> {
     use wasm_bindgen::JsCast;
     use web_sys::{Blob, BlobPropertyBag, HtmlAnchorElement, Url};
 
@@ -532,7 +543,7 @@ fn trigger_download(content: &str, filename: &str) -> Result<(), JsError> {
     parts.push(&JsValue::from_str(content));
 
     let opts = BlobPropertyBag::new();
-    opts.set_type("text/csv;charset=utf-8");
+    opts.set_type(mime_type);
 
     let blob = Blob::new_with_str_sequence_and_options(&parts, &opts)
         .map_err(|_| JsError::new("Failed to create Blob"))?;

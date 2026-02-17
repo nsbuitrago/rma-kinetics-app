@@ -89,7 +89,7 @@ export async function simulateChemogenetic(
   });
 }
 
-export async function CsvExport(
+export async function csvExport(
   solution: unknown,
   modelType: string,
   _format: string,
@@ -97,5 +97,12 @@ export async function CsvExport(
   return invoke("export_csv", {
     solution,
     model_type: modelType,
+  });
+}
+
+export async function saveImage(svg: string, speciesName: string) {
+  return invoke("save_image", {
+    svg,
+    species_name: speciesName,
   });
 }
